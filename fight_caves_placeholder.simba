@@ -1,0 +1,298 @@
+(*
+
+ This is just a placeholder to save unfinished work.
+
+ THIS DOES NOT WORK! and it's very far from working.
+
+*)
+
+
+{$DEFINE SRL_USE_REMOTEINPUT}
+{$IFDEF WINDOWS}{$DEFINE SCRIPT_GUI}{$ENDIF}
+{$I SRL/osr.simba}
+{$I WaspLib/osr.simba}
+
+begin
+  Login.PlayerIndex     := 0;
+  AntibanEnabled        := True; //Enables Most Antiban
+  BreaksEnabled         := True; //Enables Short Breaks
+  SleepEnabled          := True; //Enables Sleep Breaks
+  RemoteInputEnabled    := True; //Enables Remote Input
+  ProgressReportEnabled := True; //Enables Graphical Progress Report
+  ScriptDebugEnabled    := False; //Enables Script Debugging
+end;
+
+const
+  MAX_WAVE = 62;
+
+type
+  ERSTzhaar = (
+    KIH,      //Bat
+    KEK,      //Blob
+    MINI_KEK, //Mini Blobs
+    XIL,      //Ranger
+    MEJ,      //Healer
+    ZEK,      //Mager
+    JAD,      //Jad
+    HUR       //Jad Healer
+  );
+
+  TTzhaarArray = array of ERSTzhaar;
+
+  TRSWave = record(TSRLBaseRecord)
+    TzhaarArray: TTzhaarArray;
+    KilledTzhaarArray: TTZhaarArray;
+    Finished: Boolean;
+  end;
+
+  EState = (
+    GET_HEALTH,
+    GET_PRAYER,
+    GET_BOOST,
+
+    ATTACK_NPC,
+
+    ENABLE_PRAY,
+
+    USE_SPEC,
+    REEQUIP_GEAR,
+
+    WAIT_STATE,
+    END_SCRIPT
+  );
+
+  TScript = record(TBaseWalkerScript)
+    State: EState;
+    Waves: array of TRSWave;
+    WaveIndex: Int32;
+
+    Monster: PRSMonster;
+
+    Hitpoints: Int32;
+    PrayerPoints: Int32;
+    BoostPoints: Int32;
+
+    IsAttacking: Boolean;
+    SlayerTaskFinished: Boolean;
+  end;
+
+procedure TAntiban.Setup; override;
+begin
+  inherited;
+
+  Antiban.Skills := [ERSSkill.TOTAL];
+  Antiban.MinZoom := 10;
+  Antiban.MaxZoom := 35;
+end;
+
+procedure TTzhaarArray.Sort;
+var
+  Tzhaar: ERSTzhaar;
+  FinalArray: TTzhaarArray;
+begin
+  //for Tzhaar in Self do
+
+end;
+
+procedure TRSWave.Setup(Wave: Int32);
+begin
+  case Wave of
+    1: TzhaarArray  := [KIH];
+    2: TzhaarArray  := [KIH, KIH];
+    3: TzhaarArray  := [KEK, MINI_KEK, MINI_KEK];
+    4: TzhaarArray  := [KIH, KEK, MINI_KEK, MINI_KEK];
+    5: TzhaarArray  := [KIH, KIH, KEK, MINI_KEK, MINI_KEK];
+    6: TzhaarArray  := [KEK, KEK, MINI_KEK, MINI_KEK, MINI_KEK, MINI_KEK];
+
+    7: TzhaarArray  := [XIL];
+    8: TzhaarArray  := [KIH, XIL];
+    9: TzhaarArray  := [KIH, KIH, XIL];
+    10: TzhaarArray := [XIL, KEK, MINI_KEK, MINI_KEK];
+    11: TzhaarArray := [KIH, XIL, KEK, MINI_KEK, MINI_KEK];
+    12: TzhaarArray := [KIH, KIH, XIL, KEK, MINI_KEK, MINI_KEK];
+    13: TzhaarArray := [XIL, KEK, KEK, MINI_KEK, MINI_KEK, MINI_KEK, MINI_KEK];
+    14: TzhaarArray := [XIL, XIL];
+
+    15: TzhaarArray := [MEJ];
+    16: TzhaarArray := [KIH, MEJ];
+    17: TzhaarArray := [KIH, KIH, MEJ];
+    18: TzhaarArray := [MEJ, KEK, MINI_KEK, MINI_KEK];
+    19: TzhaarArray := [KIH, MEJ, KEK, MINI_KEK, MINI_KEK];
+    20: TzhaarArray := [KIH, KIH, MEJ, KEK, MINI_KEK, MINI_KEK];
+    21: TzhaarArray := [MEJ, KEK, MINI_KEK, MINI_KEK, MINI_KEK, MINI_KEK];
+    22: TzhaarArray := [XIL, MEJ];
+    23: TzhaarArray := [KIH, XIL, MEJ];
+    24: TzhaarArray := [KIH, KIH, XIL, MEJ];
+    25: TzhaarArray := [XIL, MEJ, KEK, MINI_KEK, MINI_KEK];
+    26: TzhaarArray := [KIH, XIL, MEJ, KEK, MINI_KEK, MINI_KEK];
+    27: TzhaarArray := [KIH, KIH, XIL, MEJ, KEK, MINI_KEK, MINI_KEK];
+    28: TzhaarArray := [XIL, MEJ, KEK, MINI_KEK, MINI_KEK, MINI_KEK, MINI_KEK];
+    29: TzhaarArray := [XIL, XIL, MEJ];
+    30: TzhaarArray := [MEJ, MEJ];
+
+    31: TzhaarArray := [ZEK];
+    32: TzhaarArray := [KIH, ZEK];
+    33: TzhaarArray := [KIH, KIH, ZEK];
+    34: TzhaarArray := [KEK, MINI_KEK, MINI_KEK, ZEK];
+    35: TzhaarArray := [KIH, KEK, MINI_KEK, MINI_KEK, ZEK];
+    36: TzhaarArray := [KIH, KIH, KEK, MINI_KEK, MINI_KEK, ZEK];
+    37: TzhaarArray := [KEK, MINI_KEK, MINI_KEK, MINI_KEK, MINI_KEK, ZEK];
+
+    38: TzhaarArray := [XIL, ZEK];
+    39: TzhaarArray := [KIH, XIL, ZEK];
+    40: TzhaarArray := [KIH, KIH, XIL, ZEK];
+    41: TzhaarArray := [XIL, KEK, MINI_KEK, MINI_KEK, ZEK];
+    42: TzhaarArray := [KIH, XIL, KEK, MINI_KEK, MINI_KEK, ZEK];
+    43: TzhaarArray := [KIH, KIH, XIL, KEK, MINI_KEK, MINI_KEK, ZEK];
+    44: TzhaarArray := [XIL, KEK, KEK, MINI_KEK, MINI_KEK, MINI_KEK, MINI_KEK, ZEK];
+    45: TzhaarArray := [XIL, XIL, ZEK];
+
+    46: TzhaarArray := [MEJ, ZEK];
+    47: TzhaarArray := [KIH, MEJ, ZEK];
+    48: TzhaarArray := [KIH, KIH, MEJ, ZEK];
+    49: TzhaarArray := [MEJ, KEK, MINI_KEK, MINI_KEK, ZEK];
+    50: TzhaarArray := [KIH, MEJ, KEK, MINI_KEK, MINI_KEK, ZEK];
+    51: TzhaarArray := [KIH, KIH, MEJ, KEK, MINI_KEK, MINI_KEK, ZEK];
+    52: TzhaarArray := [MEJ, KEK, MINI_KEK, MINI_KEK, MINI_KEK, MINI_KEK, ZEK];
+    53: TzhaarArray := [MEJ, XIL, ZEK];
+    54: TzhaarArray := [KIH, MEJ, XIL, ZEK];
+    55: TzhaarArray := [KIH, KIH, MEJ, XIL, ZEK];
+    56: TzhaarArray := [MEJ, XIL, KEK, MINI_KEK, MINI_KEK, ZEK];
+    57: TzhaarArray := [KIH, MEJ, XIL, KEK, MINI_KEK, MINI_KEK, ZEK];
+    58: TzhaarArray := [KIH, KIH, MEJ, XIL, KEK, MINI_KEK, MINI_KEK, ZEK];
+    59: TzhaarArray := [MEJ, XIL, KEK, MINI_KEK, MINI_KEK, MINI_KEK, MINI_KEK, ZEK];
+    60: TzhaarArray := [MEJ, XIL, XIL, ZEK];
+    61: TzhaarArray := [MEJ, MEJ, ZEK];
+    62: TzhaarArray := [ZEK, ZEK];
+    63: TzhaarArray := [HUR, HUR, HUR, HUR, JAD];
+  end;
+end;
+
+procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
+begin
+  Name := 'Fight caves';
+
+  inherited;
+
+  RSW.Setup('mainland');
+
+  if not RSClient.IsLoggedIn then
+    Login.LoginPlayer;
+
+  Options.SetNPCAttackOption(ERSAttackOption.ALWAYS_LEFT_CLICK);
+  Combat.SetAutoRetaliate(True);
+end;
+
+
+
+
+
+
+
+
+function TScript.GetState: EState;
+begin
+  if WL.Activity.IsFinished then
+    Exit(END_SCRIPT);
+end;
+
+procedure TScript.Run(MaxActions: Int32; MaxTime: Int64);
+begin
+  ClearDebug;
+  Self.Init(MaxActions, MaxTime);
+
+  while not Self.ShouldStop do
+  begin
+    State := Self.GetState;
+    Action := ToStr(State);
+    Self.ProcessWhileWaiting;
+
+    case State of
+      GET_HEALTH: Inventory.Consume(HEALTH_CONSUMABLE);
+      GET_PRAYER: Inventory.Consume(PRAYER_CONSUMABLE);
+      GET_BOOST: ;
+
+      ATTACK_NPC: Monster^.WalkAttack;
+
+      ENABLE_PRAY: Minimap.EnablePrayer;
+
+      USE_SPEC: CombatHandler.DoSpec;
+      REEQUIP_GEAR: CombatHandler.ReGear;
+
+      WAIT_STATE: Wait(600, 800);
+      END_SCRIPT: Break;
+    end;
+
+    Self.DoAntiban;
+  end;
+end;
+
+var
+  Script: TScript;
+
+function TRSWave.IsFinished: Boolean;
+begin
+  Result := TzhaarArray = KilledTzhaarArray;
+
+  if Result then
+  begin
+    Script.WaveIndex += 1;
+    Finished := True;
+    Script.IsAttacking := False;
+  end;
+end;
+
+function TRSInventory.Consume(ConsumableType: ERSConsumable; out Slots: TIntegerArray): Boolean; override;
+begin
+  Result := inherited(ConsumableType);
+
+  if Result then
+    Script.IsAttacking := False;
+end;
+
+type
+  TConfig = record(TScriptConfig)
+    Selector: TLabeledCombobox;
+  end;
+
+procedure TConfig.StartScript(Sender: TObject);
+begin
+  Self.Init(Sender);
+
+  MaxActions := StrToInt(Self.ActionLimit.GetText);
+  MaxTime    := StrToInt64(Self.TimeLimit.GetText);
+end;
+
+procedure TConfig.Setup; override;
+begin
+  inherited;
+
+  with Selector do
+  begin
+    Init(ScriptSettingsPanel);
+    SetCaption('Task:');
+    SetLeft(ScriptSettingsLabel.getLeft + 5);
+    SetTop(ScriptSettingsLabel.getTop + ScriptSettingsLabel.getHeight + 5);
+    SetWidth(200);
+    Combobox.setStyle(csDropDownList);
+    Combobox.getItems.Add('Task to do');
+  end;
+
+  StartButton.setOnClick(@Self.StartScript);
+end;
+
+procedure TConfig.Run; override;
+begin
+  Self.Setup;
+
+  inherited;
+end;
+
+var Config: TConfig;
+
+begin
+  {$IFDEF SCRIPT_GUI}
+  Sync(@Config.Run);
+  {$ENDIF}
+  Script.Run(MaxActions, MaxTime);
+end.
