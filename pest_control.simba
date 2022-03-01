@@ -1,0 +1,316 @@
+{$DEFINE SRL_USE_REMOTEINPUT}
+{$IFDEF WINDOWS}{$DEFINE SCRIPT_GUI}{$ENDIF}
+{$I SRL/osr.simba}
+{$I WaspLib/osr.simba}
+
+begin
+  Login.PlayerIndex     := 0;
+  AntibanEnabled        := True; //Enables Most Antiban
+  BreaksEnabled         := True; //Enables Short Breaks
+  SleepEnabled          := True; //Enables Sleep Breaks
+  RemoteInputEnabled    := True; //Enables Remote Input
+  ProgressReportEnabled := True; //Enables Graphical Progress Report
+  ScriptDebugEnabled    := False; //Enables Script Debugging
+end;
+
+type
+  EState = (
+    WAIT_STATE,
+
+    ENABLE_PRAYER,
+    DISABLE_QPRAY,
+
+    ENTER_BOAT,
+    WALK_CENTER,
+
+    ATTACK,
+    IN_COMBAT,
+
+    END_SCRIPT
+  );
+
+  TScript = record(TBaseWalkerScript)
+    State: EState;
+
+    Center: TPoint;
+    CombatLevel: Int32;
+    PCLevel: Int32;
+    PCPlank: PRSObject;
+    BoatPoly: TPointArray;
+    OnTower: Boolean;
+  end;
+
+
+procedure TScript.SetupDifficulty;
+begin
+  CombatLevel := Combat.GetCombatLevel;
+
+  case CombatLevel of
+    40..69:
+      begin
+        PCPlank := @RSObjects.PestControlNovicePlank;
+        PCLevel := 0;
+        BoatPoly := [[7670, 4186], [7689, 4186], [7689, 4214], [7670, 4214]];
+      end;
+
+    70..99:
+      begin
+        PCPlank := @RSObjects.PestControlIntermidiatePlank;
+        PCLevel := 1;
+        BoatPoly := [[7582, 4170], [7601, 4170], [7601, 4199], [7582, 4199]];
+      end;
+
+    100..126:
+      begin
+        PCPlank := @RSObjects.PestControlVeteranPlank;
+        PCLevel := 2;
+        BoatPoly := [[7558, 4142], [7577, 4142], [7577, 4170], [7558, 4170]];
+      end;
+
+    else TerminateScript('We don''t have enough combat level for pest control.');
+  end;
+end;
+
+procedure TAntiban.Setup; override;
+begin
+  inherited;
+
+  Antiban.Skills := [ERSSkill.TOTAL];
+  Antiban.MinZoom := 15;
+  Antiban.MaxZoom := 40;
+end;
+
+procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
+begin
+  Name := 'Pest Control';
+
+  inherited;
+
+  RSW.Setup('x7453y3963');
+  Center := [7660, 4480];
+
+  RSMonsters.AnyMonster.UpText := ['Attack'];
+  RSMonsters.AnyMonster.SetupCommon(55, 5, [Center]);
+  RSMonsters.AnyMonster.DotFilter.Setup([7655, 4483, 3], False);
+  CombatHandler.Setup(@RSMonsters.AnyMonster, 3000);
+
+  Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
+
+  if not RSClient.IsLoggedIn then
+    Login.LoginPlayer;
+
+  Options.SetNPCAttackOption(ERSAttackOption.ALWAYS_LEFT_CLICK);
+
+  Self.SetupDifficulty;
+end;
+
+
+function TScript.InIsland(Pos: TPoint): Boolean;
+begin
+  Result := Pos.Y > 4300;
+
+  if Result then
+    CombatHandler.InCombatTimer.Resume
+  else
+    CombatHandler.InCombatTimer.Timeout := GetTickCount;
+end;
+
+function TScript.InBoat(Pos: TPoint): Boolean;
+begin
+  Result := SRL.PointInPoly(Pos, BoatPoly);
+end;
+
+
+function TScript.EnterBoat: Boolean;
+begin
+  if PCPlank^.WalkClick then
+  begin
+    Minimap.WaitMoving;
+    Result := WaitUntil(Self.InBoat(RSW.GetMyPos), 100, 10000);
+  end;
+end;
+
+
+function TScript.WalkSpot: Boolean;
+var
+  TPA: TPointArray := PopulateTile(Center, 4);
+begin
+  Result := RSW.WebWalk(TPA.RandomPoint, 8, 0.2);
+end;
+
+function TScript.GetState: EState;
+var
+  Pos: TPoint := RSW.GetMyPos;
+begin
+  if WL.Activity.IsFinished then
+    Exit(END_SCRIPT);
+
+  if Self.InIsland(Pos) then
+  begin
+    if Pos.WithinDistance(Center, 15) then
+    begin
+      if not Minimap.IsPrayerEnabled and (Minimap.GetPrayerLevel > 5) then
+        Exit(ENABLE_PRAYER);
+
+      if not MainScreen.WaitInCombat(2000) then
+        Exit(ATTACK);
+
+      Exit(IN_COMBAT);
+    end;
+
+    Exit(WALK_CENTER);
+  end;
+
+  if Minimap.IsPrayerEnabled then
+    Exit(DISABLE_QPRAY);
+
+  if Self.InBoat(Pos) then
+    Exit(WAIT_STATE);
+
+  Exit(ENTER_BOAT);
+end;
+
+procedure TScript.Run(MaxActions: Int32; MaxTime: Int64);
+begin
+  ClearDebug;
+  Self.Init(MaxActions, MaxTime);
+
+  repeat
+    State := Self.GetState;
+    Action := ToStr(State);
+    ExtraInfo := ' Combat level: ' + ToStr(CombatLevel) +
+                 ' CombatStyle: ' + ToStr(CombatHandler.CombatStyle.CombatType);
+    Self.ProcessWhileWaiting;
+
+    case State of
+      WAIT_STATE: Wait(500, 800);
+
+      ENABLE_PRAYER: Minimap.EnablePrayer;
+      DISABLE_QPRAY: Minimap.DisablePrayer;
+
+      ENTER_BOAT:  Self.EnterBoat;
+      WALK_CENTER: Self.WalkSpot;
+
+      ATTACK:     CombatHandler.WalkAttackMonster;
+      IN_COMBAT:  MainScreen.WaitInCombat(3000);
+      END_SCRIPT: Break;
+    end;
+
+    Self.DoAntiban;
+  until Self.ShouldStop;
+end;
+
+var
+  Script: TScript;
+
+function TRSMainScreen.InCombat: Boolean; override;
+begin
+  Result := inherited;
+
+  if Result then WL.Activity.Restart;
+end;
+
+function TWebGraph.PathBetween(p,q: TPoint; Rnd:Double=0): TPointArray; constref; override;
+var
+  n1,n2: Int32;
+  nodes: TIntegerArray;
+begin
+  n1 := Self.FindNearestNode(p);
+  n2 := Self.FindNearestNode(q);
+  if (n1 <> n2) then
+  begin
+    nodes := Self.FindPath(n1,n2,Rnd);
+    if (Length(nodes) = 0) then
+      Exit;
+  end;
+  // if distance between nodes > ??? then Unreliable result
+
+  Result += p;
+  Result += NodesToPoints(nodes);
+  Result += q;
+end;
+
+function TRSWalker.Click(MinimapPoint: TPoint; Randomness: Int32): Boolean; override;
+var
+  P: TPoint;
+begin
+  Result := True;
+
+  if Self.ScreenWalk then
+  begin
+    Mouse.Move(Minimap.PointToMsRect(MinimapPoint).Mean);
+
+    if not MainScreen.IsUpText(['Walk here', 'Chop', 'Attack']) then
+      Exit(ChooseOption.Select('Walk here'));
+  end else
+  begin
+    P := MinimapPoint.Random(-Randomness, Randomness);
+    while not Minimap.IsPointOn(P) do
+      P := MinimapPoint.Random(-Randomness, Randomness);
+
+    Mouse.Move(P);
+  end;
+
+  Mouse.Click(MOUSE_LEFT);
+
+  // 15% chance of spam clicking
+  if (Randomness > 0) and (Random() < 0.15) then
+    for 0 to Random(3) do
+    begin
+      Mouse.Click(Mouse.Position(), MOUSE_LEFT);
+
+      Wait(0, 150, wdLeft);
+    end;
+end;
+
+type
+  TConfig = record(TScriptConfig)
+    InfoBox: TLabel;
+  end;
+
+procedure TConfig.StartScript(Sender: TObject);
+begin
+  Self.Init(Sender);
+
+  //CurrentTask := ETask(Selector.Combobox.getItemIndex);
+
+  MaxActions := StrToInt(Self.ActionLimit.GetText);
+  MaxTime    := StrToInt64(Self.TimeLimit.GetText);
+end;
+
+procedure TConfig.Setup; override;
+begin
+  inherited;
+
+  with InfoBox do
+  begin
+    Init(ScriptSettingsPanel);
+    setParent(ScriptSettingsPanel);
+    setCaption(
+      'Using a ranged weapon is recommended.' + STR_NEW_LINE +
+      'This will use your quick prayers, make sure you set them up in advance.'
+    );
+    SetLeft(ScriptSettingsLabel.getLeft + 5);
+    SetTop(ScriptSettingsLabel.getTop + ScriptSettingsLabel.getHeight + 5);
+    SetWidth(200);
+  end;
+
+  StartButton.setOnClick(@Self.StartScript);
+end;
+
+procedure TConfig.Run; override;
+begin
+  Self.Setup;
+
+  inherited;
+end;
+
+var
+  Config: TConfig;
+
+begin
+  {$IFDEF SCRIPT_GUI}
+  Sync(@Config.Run);
+  {$ENDIF}
+  Script.Run(MaxActions, MaxTime);
+end.

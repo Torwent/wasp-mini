@@ -1,0 +1,793 @@
+{$DEFINE SRL_USE_REMOTEINPUT}
+{$IFDEF WINDOWS}{$DEFINE SCRIPT_GUI}{$ENDIF}
+{$I SRL/osr.simba}
+{$I WaspLib/osr.simba}
+
+begin
+  Login.PlayerIndex     := 0;
+  AntibanEnabled        := True; //Enables Most Antiban
+  BreaksEnabled         := True; //Enables Short Breaks
+  SleepEnabled          := True; //Enables Sleep Breaks
+  RemoteInputEnabled    := True; //Enables Remote Input
+  ProgressReportEnabled := True; //Enables Graphical Progress Report
+  ScriptDebugEnabled    := False; //Enables Script Debugging
+end;
+
+type
+  EMLMLevel = (
+    NO_REQS, DIARY, UPPER_LEVEL
+  );
+
+var
+  CurrentMLMLevel: EMLMLevel := UPPER_LEVEL;
+
+type
+  EState = (
+    WAIT_STATE,
+    USE_SPEC,
+    GO_LEVEL,
+    EXIT_LEVEL,
+    CLEAR_ROCKFALL,
+    MINE_ROCK,
+    DROP_ITEMS,
+    DEPOSIT_PAYDIRT,
+    GET_HAMMER,
+    FIX_WHEELS,
+    EMPTY_SACK,
+    OPEN_DEPOSIT,
+    DEPOSIT_ITEMS,
+    CLOSE_INTERFACE,
+    END_SCRIPT
+  );
+
+  TScript = record(TBaseWalkerScript)
+    State: EState;
+
+    Position: TPoint;
+    LoweLevelColor: TCTS2Color;
+    UpperLevelColor: TCTS2Color;
+    SackCountBox: TBox;
+    EmptyingSack: Boolean;
+    OreList: TRSItemArray;
+    PriceList: TIntegerArray;
+    DropList: TRSItemArray;
+
+    Entrance: PRSObject;
+    RockFall: TRSObject;
+    OreArray: TRSObjectArray;
+    OreIndex: Int32;
+
+    PickaxesArray: TRSItemArray;
+    UseDepositAll: Boolean;
+  end;
+
+procedure TAntiban.Setup; override;
+begin
+  inherited;
+
+  Antiban.Skills := [ERSSkill.TOTAL];
+  Antiban.MinZoom := 40;
+  Antiban.MaxZoom := 40;
+end;
+
+procedure TScript.SetupRockfall(Tile: TPoint);
+begin
+  RockFall := RSObjects.MLMRockFall;
+  RockFall.SetupCommon(3, [Tile]);
+end;
+
+procedure TScript.SetupOre(X, Y: Double; TileArray: TPointArray);
+var
+  Ore: TRSObject;
+begin
+  Ore := RSObjects.MLMOre;
+  Ore.SetupCommon([X, Y, 9], TileArray);
+  OreArray += Ore;
+end;
+
+procedure TScript.SetupOre(Shapes: array of TRSObjectShape); overload;
+var
+  Ore: TRSObject;
+begin
+  Ore := RSObjects.MLMOre;
+  Ore.SetupCommon(Shapes);
+  OreArray += Ore;
+end;
+
+procedure TScript.SetupRocks;
+begin
+  case CurrentMLMLevel of
+    NO_REQS:
+      begin
+        Self.SetupRockfall([7540, 4782]);
+        Self.Setupore([
+        //Shape1 (Vertical):
+        [[[7516, 4782], [7516, 4779], [7526, 4753], [7522, 4740], [7522, 4737],
+          [7522, 4733], [7505, 4742], [7505, 4746], [7505, 4751], [7489, 4762],
+          [7490, 4766], [7489, 4770], [7494, 4778], [7494, 4781], [7494, 4786],
+          [7506, 4785], [7506, 4780], [7506, 4778], [7493, 4802], [7493, 4806],
+          [7493, 4811], [7505, 4825], [7506, 4828], [7485, 4831], [7485, 4835],
+          [7485, 4838], [7517, 4830], [7517, 4826], [7517, 4821]], [0.2, 1, 9]],
+        //Shape2 (Horizontal):
+        [[[7513, 4775], [7509, 4774], [7501, 4754], [7496, 4751], [7509, 4833],
+          [7513, 4833], [7493, 4854], [7498, 4854], [7507, 4859], [7510, 4859],
+          [7519, 4854], [7523, 4854]], [1, 0.2, 9]]]);
+      end;
+
+    DIARY:
+      begin
+        Entrance := @RSObjects.MLMDarkTunnel;
+        Self.SetupOre(0.2, 1,
+        [[7689, 4702], [7710, 4701], [7711, 4705]]);
+        Self.SetupRockfall([7697, 4710]);
+
+        Self.Setupore([
+        //Shape1 (Vertical):
+        [[[7693, 4719], [7693, 4723], [7720, 4720], [7724, 4735],
+          [7718, 4747], [7718, 4751], [7689, 4750]],
+         [0.2, 1, 9]],
+        //Shape2 (Horizontal):
+        [[[7702, 4762]], [1, 0.2, 9]]]);
+      end;
+
+    UPPER_LEVEL:
+      begin
+        Entrance := @RSObjects.MLMLadder;
+        Self.Setupore([
+        //Shape1 (Vertical):
+        [[[7682, 4710], [7682, 4706], [7682, 4702], [7682, 4698],
+          [7665, 4691],
+          [7648, 4679],
+          [7644, 4670],
+          [7638, 4670], [7638, 4666],
+          [7648, 4661], [7648, 4657],
+          [7622, 4656]],
+         [0.2, 1, 11]],
+        //Shape2 (Horizontal):
+        [[[7678, 4693], [7674, 4693], [7670, 4693],
+          [7656, 4682],
+          [7646, 4654], [7642, 4654],
+          [7635, 4663], [7630, 4663], [7626, 4662]],
+         [1, 0.2, 11]]]);
+
+        Self.SetupRockfall([7626, 4655]);
+        Self.Setupore([
+        //Shape1 (Vertical):
+        [[[7567, 4650], [7607, 4654]], [0.2, 1, 11]],
+        //Shape2 (Horizontal):
+        [[[7617, 4653], [7614, 4654], [7601, 4658], [7597, 4658], [7587, 4664],
+          [7583, 4663], [7574, 4653]], [1, 0.2, 11]]]);
+      end;
+  end;
+end;
+
+procedure TScript.SetupItems;
+var
+  i: Int32;
+begin
+  DropList := [
+    'Uncut sapphire',
+    'Uncut emerald',
+    'Uncut ruby',
+    'Uncut diamond',
+    'Clue geode (beginner)'
+  ];
+
+  OreList := [
+    'Golden nugget',
+    'Coal',
+    'Gold ore',
+    'Mithril ore',
+    'Adamantite ore',
+    'Runite ore'
+  ];
+
+  PickaxesArray := [
+    'Bronze pickaxe',
+    'Iron pickaxe',
+    'Steel pickaxe',
+    'Black pickaxe',
+    'Mithril pickaxe',
+    'Adamant pickaxe',
+    'Rune pickaxe',
+    'Dragon pickaxe',
+    'Infernal pickaxe',
+    'Crystal pickaxe'
+  ];
+
+  for i := 1 to High(OreList) do
+    PriceList += ItemData.GetAverage(OreList[i]);
+end;
+
+procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
+var
+  i: Int32;
+begin
+  Name := 'Motherload Miner';
+
+  inherited;
+
+  WL.Activity.Length := 7 * ONE_MINUTE;
+
+  RSW.Setup('x7408y4690'); //x7408y4534
+  RSW.ScreenWalk := True;
+
+  LoweLevelColor := CTS2(3167847, 6, 0.35, 1.10);
+  UpperLevelColor := CTS2(2450553, 2, 0.44, 0.87);
+
+  case RSClient.Mode of
+    ERSClientMode.FIXED:
+      SackCountBox := [20, 42, 63, 61];
+
+    ERSClientMode.RESIZABLE_CLASSIC,
+    ERSClientMode.RESIZABLE_MODERN:
+      SackCountBox := [17, 38, 60, 57];
+  end;
+
+  Self.SetupRocks;
+  Self.SetupItems;
+
+  if not RSClient.IsLoggedIn then
+    Login.LoginPlayer;
+
+  Options.SetZoomLevel(40);
+
+  if not Inventory.FindItems(PickaxesArray) then
+    UseDepositAll := True;
+
+  if ScriptDebugEnabled then
+  begin
+    if CurrentMLMLevel <> NO_REQS then
+      DebugObjectArray += Entrance;
+    DebugObjectArray += @RockFall;
+    DebugObjectArray += @RSObjects.MLMHopper;
+    DebugObjectArray += @RSObjects.MLMSack;
+    DebugObjectArray += @RSObjects.MLMDepositBox;
+
+    for i := 0 to High(OreArray) do
+      DebugObjectArray += @OreArray[i];
+  end;
+end;
+
+
+procedure TScript.CountProfit;
+var
+  i: Int32;
+begin
+  for i := 1 to High(OreList) do
+    TotalProfit += Inventory.CountItem(OreList[i]) * PriceList[i-1];
+end;
+
+
+function TScript.GetSackCount: Int32;
+begin
+  Result := OCR.RecognizeNumber(SackCountBox, TOCRShadowRule.Create(20), RS_FONT_QUILL);
+end;
+
+function TScript.IsSackFull: Boolean;
+begin
+  Result := SRL.CountColor(CTS0(255, 0), SackCountBox) > 0;
+  EmptyingSack := Result;
+end;
+
+
+function TScript.InMainArea: Boolean;
+var
+  TPA: TPointArray;
+begin
+  TPA := [
+    [7567, 4660], [7633, 4675], [7642, 4690], [7656, 4697],
+    [7664, 4703], [7674, 4706], [7680, 4775], [7640, 4810],
+    [7600, 4810], [7540, 4800], [7540, 4782]
+  ];
+
+  Result := RSW.InPoly(TPA);
+end;
+
+function TScript.InQuarry: Boolean;
+var
+  TPA: TPointArray;
+begin
+  TPA := RSW.GetMMPoly(OreArray[OreIndex].TileArray);
+  TPA := TPA.ConvexHull.Connect;
+
+  if CurrentMLMLevel = NO_REQS then
+    TPA := TPA.Grow(15)
+  else if CurrentMLMLevel = DIARY then
+    TPA := TPA.Grow(5)
+  else if CurrentMLMLevel = UPPER_LEVEL then
+    TPA := TPA.Grow(8);
+
+  TPA.Fill;
+
+  TPA := TPA.Edges;
+
+  Result := Result := SRL.PointInPoly(Minimap.Center, TPA);
+  if not Result then
+    Result := not Self.InMainArea;
+end;
+
+
+
+function TScript.GetCluster: Int32;
+var
+  MyPos: TPoint := RSW.GetMyPos;
+begin
+  case CurrentMLMLevel of
+    NO_REQS: Result := 0;
+
+    DIARY:
+      begin
+        if MyPos.Y < RockFall.TileArray[0].Y then
+          Result := 0
+        else
+          Result := 1;
+      end;
+
+    UPPER_LEVEL:
+      begin
+        if MyPos.X >= (RockFall.TileArray[0].X - 2) then
+          Result := 0
+        else
+          Result := 1;
+      end;
+  end;
+end;
+
+
+function TScript.GoThroughEntrance: Boolean;
+var
+  OldPlace: Boolean;
+begin
+  OldPlace := Self.InMainArea;
+
+  if (CurrentMLMLevel <> NO_REQS) then
+  begin
+    if Entrance^.WalkClick then
+    begin
+      Minimap.WaitMoving;
+      Result := WaitUntil(Self.InMainArea <> OldPlace, 100, 10000);
+      WriteLn('OldPlace: ', OldPlace);
+      WriteLn('InMainArea: ', Self.InMainArea);
+      WriteLn('Result: ', Result);
+    end;
+  end
+  else
+  begin
+    if RockFall.WalkClick then
+    begin
+      Minimap.WaitMoving;
+      XPBar.WaitXP(5000);
+    end;
+
+    if OldPlace then
+      RSW.WebWalk([7525, 4782], 2, 0.2)
+    else
+      RSW.WebWalk([7557, 4782], 2, 0.2);
+
+    Result := WaitUntil(Self.InMainArea <> OldPlace, 100, 10000);
+  end;
+end;
+
+
+procedure TScript.HandleRockfall;
+var
+  ATPA: T2DPointArray;
+  TPA: TPointArray;
+  P: TPoint;
+begin
+  if RockFall.Find(ATPA) then
+  begin
+    TPA := ATPA[0];
+    if TPA = [] then
+      Exit;
+
+    P := TPA[Random(Low(TPA), High(TPA))];
+    Mouse.Move(P);
+    if MainScreen.IsUpText(RockFall.UpText) then
+    begin
+      Mouse.Click(MOUSE_LEFT);
+      Minimap.WaitMoving;
+      XPBar.WaitXP(3000);
+    end;
+  end;
+end;
+
+function TScript.MoveNextCluster: Boolean;
+var
+  Index: Int32;
+begin
+  Self.HandleRockfall;
+
+  if OreIndex = High(OreArray) then
+    Index := 0
+  else
+    Index += 1;
+
+  Result := RSW.WebWalk(OreArray[Index].TileArray, 2, 0.2);
+end;
+
+function TScript.MovePreviousCluster: Boolean;
+begin
+  if OreIndex = 0 then
+    Exit;
+
+  Self.HandleRockfall;
+
+  Result := RSW.WebWalk(OreArray[OreIndex - 1].TileArray, 2, 0.2);
+end;
+
+function TScript.LeaveQuarry: Boolean;
+begin
+  repeat
+    Self.MovePreviousCluster;
+    OreIndex := Self.GetCluster;
+  until OreIndex = 0;
+
+  if CurrentMLMLevel <> NO_REQS then
+  begin
+    if Entrance^.WalkClick then
+    begin
+      Minimap.WaitMoving;
+      Result := WaitUntil(Self.InMainArea, 100, 5000);
+    end;
+  end
+  else if Self.GoThroughEntrance then
+    Result := WaitUntil(Self.InMainArea, 100, 5000);
+end;
+
+
+function TSRL.IsAnimating(Area:TBox; Shift, WaitTime:UInt32; Iter:UInt32=1): Boolean; override;
+var
+  i:Int32;
+begin
+  for i:=1 to Iter do
+    if (Self.GetPixelShift(Area, WaitTime) > shift) or XPBar.EarnedXP then
+      Exit(True);
+end;
+
+function TScript.IsMining: Boolean;
+begin
+  Result := SRL.IsAnimating(MainScreen.GetPlayerBox, MainScreen.ConvertDistance(450), 350, 5);
+end;
+
+function TScript.WaitMining(t: UInt32 = 3000): Boolean;
+var
+  GotXP: Boolean;
+begin
+  Result := WaitUntil(Self.IsMining or (GotXP := XPBar.EarnedXP), 100, t);
+  if GotXP then Result := False;
+end;
+
+function TScript.MineOre: Boolean;
+begin
+  while Self.InMainArea do
+    Self.GoThroughEntrance;
+
+  if OreArray[OreIndex].WalkClick(True, 5) then
+  begin
+    Minimap.WaitMoving;
+    Result := Self.WaitMining;
+
+    if Result then
+      Exit;
+  end;
+
+  if OreIndex = High(OreArray) then
+    Self.MovePreviousCluster
+  else
+    Self.MoveNextCluster;
+end;
+
+
+function TScript.DepositPayDirt: Boolean;
+var
+  InvCount: Int32;
+  ShouldEmptySack: Boolean;
+begin
+  while not Self.InMainArea do
+    Self.LeaveQuarry;
+
+  InvCount := Inventory.Count;
+  if RSObjects.MLMHopper.WalkClick then
+  begin
+    ShouldEmptySack := (Self.GetSackCount + InvCount) > 80;
+    Minimap.WaitMoving;
+    Result := WaitUntil(not Inventory.IsFull, 100, 10000);
+  end;
+
+  if Result then
+  begin
+    WL.Activity.Restart;
+    EmptyingSack := ShouldEmptySack;
+    TotalActions += InvCount;
+  end;
+end;
+
+function TScript.WithdrawSack: Boolean;
+var
+  InvCount: Int32 := Inventory.Count;
+begin
+  if RSObjects.MLMSack.WalkClick then
+  begin
+    Minimap.WaitMoving;
+    Result := WaitUntil(InvCount < Inventory.Count, 100, 10000);
+  end;
+
+  if Result then
+  begin
+    Self.CountProfit;
+    EmptyingSack := Self.GetSackCount <> 0;
+  end;
+end;
+
+
+function TScript.OpenDepositBox: Boolean;
+begin
+  if RSObjects.MLMDepositBox.WalkClick then
+  begin
+    Minimap.WaitMoving;
+    Result := WaitUntil(DepositBox.IsOpen, 100, 10000);
+  end;
+end;
+
+function TScript.DepositOres: Boolean;
+var
+  Item: TRSItem;
+  Slots: TBoxArray;
+begin
+  if UseDepositAll then
+  begin
+    if DepositBox.GetButton(ERSDepositButton.DEPOSIT_INVENTORY).Click then
+    begin
+      MainScreen.CloseInterface;
+      Result := WaitUntil(Inventory.Count = 0, 100, 10000);
+    end;
+  end
+  else
+  begin
+    DepositBox.GetButton(ERSDepositButton.QUANTITY_ALL).Enable;
+    DepositBox.DepositItemArray(OreList, True);
+    Result := WaitUntil(Inventory.Count = 0, 100, 10000);
+  end;
+end;
+
+
+function TScript.GetState: EState;
+begin
+  if WL.Activity.IsFinished then
+    Exit(END_SCRIPT)
+
+  else if MainScreen.HasInterface then
+  begin
+    if DepositBox.IsOpen then
+    begin
+      if (UseDepositAll and (Inventory.Count > 0)) or (Inventory.Count > 1) then
+        Exit(DEPOSIT_ITEMS);
+    end;
+    Exit(CLOSE_INTERFACE);
+  end
+
+  else if Inventory.FindItems(OreList) then
+    Exit(OPEN_DEPOSIT)
+
+  else if Inventory.FindItems(DropList) then
+    Exit(DROP_ITEMS)
+
+  else if Inventory.FindItem('Pay-dirt') and Inventory.IsFull then
+    Exit(DEPOSIT_PAYDIRT)
+
+  else if EmptyingSack or Self.IsSackFull then
+    Exit(EMPTY_SACK)
+
+  else if Self.InQuarry and Self.IsMining then
+  begin
+    if Minimap.IsSpecWeapon and (Minimap.GetSpecLevel =  100) then
+      Exit(USE_SPEC);
+    Exit(WAIT_STATE);
+  end
+
+  Exit(MINE_ROCK);
+end;
+
+procedure TScript.Run(MaxActions: Int32; MaxTime: Int64);
+begin
+  ClearDebug;
+  Self.Init(MaxActions, MaxTime);
+
+  repeat
+    State := Self.GetState;
+    Action := ToStr(State);
+    OreIndex := Self.GetCluster;
+    ExtraInfo := 'CurrentCluster: ' + ToStr(OreIndex) +
+                 STR_NEW_LINE +
+                 'SackCount: ' + ToStr(Self.GetSackCount) +
+                 STR_NEW_LINE +
+                 'EmptyingSack: ' + ToStr(EmptyingSack) +
+                 STR_NEW_LINE +
+                 'InMainArea: ' + ToStr(Self.InMainArea) +
+                 STR_NEW_LINE +
+                 'InQuarry: ' + ToStr(Self.InQuarry);
+
+    Self.ProcessWhileWaiting;
+
+    case State of
+      USE_SPEC: Minimap.EnableSpec(100);
+      CLOSE_INTERFACE: MainScreen.CloseInterface;
+      OPEN_DEPOSIT: Self.OpenDepositBox;
+      DEPOSIT_ITEMS: Self.DepositOres;
+      EMPTY_SACK: Self.WithdrawSack;
+      MINE_ROCK: Self.MineOre;
+      DEPOSIT_PAYDIRT: Self.DepositPayDirt;
+      WAIT_STATE: XPBar.WaitXP(2000);
+      DROP_ITEMS: Inventory.ShiftDrop(DropList, Inventory.RandomPattern);
+      END_SCRIPT: Break;
+    end;
+
+    Self.DoAntiban;
+  until Self.ShouldStop;
+end;
+
+
+var
+  Script: TScript;
+
+
+function TRSObject._HoverHelper(Attempts: Int32): Boolean; override;
+var
+  Attempt: Int32;
+  ATPA: T2DPointArray;
+  Points: TPointArray;
+  CompassAngle: Double;
+begin
+  for Attempt := 0 to Attempts do
+  begin
+    if (RSClient.Mode = ERSClientMode.FIXED) and MainScreen.HasInterface then
+      Exit(False);
+
+    if Self.Find(ATPA) then
+    begin
+      Points := ATPA[Random(0, High(ATPA))];
+
+      if Points <> [] then
+      begin
+        Mouse.Move(Points[Random(0, High(Points))]);
+        if not Filter.UpText then
+          Exit(True);
+      end;
+    end;
+
+    if MainScreen.IsUpText(UpText) then
+      Exit(True);
+
+    //will rotate the screen for the last attempt if hasn't hovered properly yet
+    if Attempt = (Attempts - 1) then
+    begin
+      CompassAngle := Minimap.GetCompassAngle;
+      CompassAngle += Random(-50, 50);
+      Minimap.SetCompassAngle(CompassAngle, 10);
+    end;
+  end;
+end;
+
+function TRSObject._WalkHoverHelper(Attempts: Int32): Boolean; override;
+var
+  Attempt: Int32;
+  ATPA: T2DPointArray;
+  Points: TPointArray;
+  CompassAngle: Double;
+  StrArray: TStringArray;
+begin
+  if not Filter.Walker then
+    Exit;
+
+  if Filter.UpText then
+  begin
+    if ActionUpText = [] then
+      StrArray := UpText
+    else
+      StrArray := ActionUpText;
+  end;
+
+  for Attempt := 0 to Attempts do
+  begin
+    if (RSClient.Mode = ERSClientMode.FIXED) and MainScreen.HasInterface then
+      Exit(False);
+
+    if RedClicked then
+      Exit(True);
+
+    if Self.Find(ATPA) then
+    begin
+      if Attempt < 2 then
+        Points := ATPA[0] // 0 for the closest one.
+      else
+      begin
+        if Length(ATPA) > (Attempt - 2) then
+          Points := ATPA[Attempt - 2]
+        else
+          Points := ATPA[Random(0, High(ATPA))];
+      end;
+
+      if Points <> [] then
+      begin
+        Mouse.Move(Points[Random(0, High(Points))]);
+        if not Filter.UpText then
+          Exit(True);
+      end;
+    end;
+
+    if MainScreen.IsUpText(UpText) then
+      Exit(True)
+    else if not WalkerArray[WalkerIndex].AtTile(TileArray, 50) then
+    begin
+      if Filter.UpText then
+        WalkerArray[WalkerIndex].WebWalk(TileArray, StrArray, RedClicked, 30, 0.2)
+      else
+        WalkerArray[WalkerIndex].WebWalk(TileArray, 30, 0.2);
+    end
+    else if Attempt = (Attempts - 1) then
+    begin
+      if not WalkerArray[WalkerIndex].AtTile(TileArray, 25) then
+      begin
+        if (Filter.UpText and WalkerArray[WalkerIndex].WebWalk(TileArray, StrArray, RedClicked, 30, 0.2)) or
+          WalkerArray[WalkerIndex].WebWalk(TileArray, 30, 0.2) then
+          Continue;
+      end;
+
+      CompassAngle := Minimap.GetCompassAngle;
+      CompassAngle += Random(-50, 50);
+      Minimap.SetCompassAngle(CompassAngle, 10);
+    end;
+  end;
+end;
+
+
+type
+  TConfig = record(TScriptConfig)
+    Selector: TLabeledCombobox;
+  end;
+
+procedure TConfig.StartScript(Sender: TObject);
+begin
+  Self.Init(Sender);
+
+  CurrentMLMLevel := EMLMLevel(Selector.Combobox.getItemIndex);
+end;
+
+procedure TConfig.Setup; override;
+begin
+  inherited;
+
+  with Selector do
+  begin
+    Init(ScriptSettingsPanel);
+    SetCaption('Task:');
+    SetLeft(ScriptSettingsLabel.getLeft + 5);
+    SetTop(ScriptSettingsLabel.getTop + ScriptSettingsLabel.getHeight + 5);
+    SetWidth(200);
+    Combobox.setStyle(csDropDownList);
+    Combobox.getItems.Add('No requirements');
+    Combobox.getItems.Add('Falador diary');
+    Combobox.getItems.Add('Upper level');
+    Combobox.setItemIndex(Ord(CurrentMLMLevel));
+  end;
+
+  StartButton.setOnClick(@Self.StartScript);
+end;
+
+procedure TConfig.Run; override;
+begin
+  Self.Setup;
+
+  inherited;
+end;
+
+var Config: TConfig;
+
+begin
+  {$IFDEF SCRIPT_GUI}
+  Sync(@Config.Run);
+  {$ENDIF}
+  Script.Run(MaxActions, MaxTime);
+end.
