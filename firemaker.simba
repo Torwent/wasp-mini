@@ -170,6 +170,7 @@ end;
 
 function TLogBurner.BurnLogs: Boolean;
 begin
+  WL.PreviousXP := XPBar.Read;
   if Inventory.Use(Tool.Item, Material.Item) then
     Result := XPBar.WaitXP(5000);
 
