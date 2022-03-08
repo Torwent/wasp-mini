@@ -46,6 +46,8 @@ type
     Fire: TRSObject;
     Logs: TRSItem;
     Tool: TRSBankWithdrawItem;
+    ToolSlot: Int32;
+    BurnTimer: TCountDown;
     Material: TRSBankWithdrawItem;
   end;
 
@@ -94,11 +96,13 @@ begin
   NextStartingPoint := StartingPoints[0];
 
   Fire := RSObjects.BurningFire;
-
-  RSW.ScreenWalk := True;
+  BurnTimer.Setup(30000);
 
   if not RSClient.IsLoggedIn then
     Login.LoginPlayer;
+
+  if not Inventory.FindItem(Tool.Item, ToolSlot) then
+    ToolSlot := -1;
 
   if ScriptDebugEnabled then
   begin
@@ -107,6 +111,17 @@ begin
   end;
 end;
 
+function TRSMainScreen.GetPlayerFloorBox: TBox;
+var
+  A: Double := Minimap.GetCompassAngle(False);
+  Center: TPoint := Minimap.Center;
+  TPA: TPointArray;
+begin
+  TPA := [Minimap.VecToMS(Vec3(Center.X - 1, Center.Y, 3), A),
+          Minimap.VecToMS(Vec3(Center.X + 1, Center.Y, -3), A)];
+
+  Result := TPA.Bounds;
+end;
 
 procedure TLogBurner.ChangeStartingPoint;
 begin
@@ -134,11 +149,16 @@ begin
   end;
 end;
 
+function TLogBurner.WalkNextPoint: Boolean;
+begin
+  if Result := RSW.WebWalk(NextStartingPoint) then
+     Self.ChangeStartingPoint;
+end;
 
 function TLogBurner.Teleport: Boolean;
 begin
   if Magic.Open and not Magic.CanActivate(ERSSPell.VARROCK_TELEPORT) then
-    RSW.WebWalk(NextStartingPoint, 40, 0.2)
+    Self.WalkNextPoint
   else if Magic.CastSpell(ERSSpell.VARROCK_TELEPORT) then
     Wait(1200);
 
@@ -148,11 +168,6 @@ begin
     Wait(1200);
 end;
 
-function TLogBurner.WalkNextPoint: Boolean;
-begin
-  if Result := RSW.WebWalk(NextStartingPoint) then
-     Self.ChangeStartingPoint;
-end;
 
 function TLogBurner.Withdraw(Item: TRSBankWithdrawItem): Boolean;
 var
@@ -169,17 +184,38 @@ begin
 end;
 
 function TLogBurner.BurnLogs: Boolean;
+var
+  InvCount: Int32 := Inventory.CountItem(Material.Item);
 begin
   WL.PreviousXP := XPBar.Read;
-  if Inventory.Use(Tool.Item, Material.Item) then
-    Result := XPBar.WaitXP(5000);
-
-  if Result then
-    Wait(800, 1200);
+  if Inventory.Use(ToolSlot, Material.Item) then
+  begin
+    Wait(100);
+    if InvCount > Inventory.CountItem(Material.Item) then
+    begin
+      if Inventory.FindItem(Material.Item) then
+        Inventory.SetSelectedSlot(ToolSlot);
+      BurnTimer.Restart(Random(-3000, 0));
+      repeat
+        Wait(100);
+        if Chat.LeveledUp then
+        begin
+          Inventory.SetSelectedItem(ToolSlot);
+          Mouse.Move(MainScreen.GetPlayerFloorBox);
+          if MainScreen.IsUpText('ogs') then
+            Mouse.Click(MOUSE_LEFT)
+          else
+            Break;
+        end;
+      until BurnTimer.IsFinished or XPBar.EarnedXP;
+    end;
+  end;
 end;
 
 
 function TLogBurner.GetState: EBurnerState;
+var
+  MyPos: TPoint;
 begin
   if WL.Activity.IsFinished then
     Exit(EBurnerState.END_SCRIPT);
@@ -205,12 +241,13 @@ begin
     Exit(EBurnerState.CLOSE_INTERFACE);
   end;
 
-  if Inventory.FindItem(Tool.Item) and Inventory.FindItem(Material.Item) then
+  if (Inventory.IsSlotUsed(ToolSlot) or Inventory.FindItem(Tool.Item, ToolSlot)) and Inventory.FindItem(Material.Item) then
   begin
-    if RSW.AtTile(ScriptBank^.TileArray, 10) then
+    MyPos := RSW.GetMyPos;
+    if MyPos.WithinDistance(ScriptBank^.TileArray, 10) then
       Exit(EBurnerState.TELEPORT);
 
-    if Inventory.IsFull and not RSW.AtTile(NextStartingPoint, 4) then
+    if Inventory.IsFull and not MyPos.WithinDistance(NextStartingPoint, 4) then
     begin
       if Fire.Find then
         Exit(EBurnerState.CHANGE_START);
@@ -218,10 +255,6 @@ begin
       Exit(EBurnerState.WALK_SPOT);
     end;
 
-    Fire.TileArray := [RSW.GetMyPos];
-    //if Fire^.Find <> [] then
-      //  Exit(EBurnerState.SMALL_STEP)
-      //else
     Exit(EBurnerState.BURN_LOG);
   end;
 
@@ -233,8 +266,7 @@ begin
   ClearDebug;
   Self.Init(MaxActions, MaxTime);
 
-  while not Self.ShouldStop do
-  begin
+  repeat
     State := Self.GetState;
     Action := ToStr(State);
     Self.ProcessWhileWaiting;
@@ -256,12 +288,16 @@ begin
     end;
 
     Self.DoAntiban;
-  end;
+  until Self.ShouldStop;
 end;
 
 var
   LogBurner: TLogBurner;
 
+function TRSInventory.IsSlotUsed(Slot: Int32): Boolean; override;
+begin
+  Result := (Slot > -1) and Self.Open() and Self.IsSlotUsed(Self.GetSlotBox(Slot));
+end;
 
 type
   TBurnerConfig = record(TScriptConfig)
