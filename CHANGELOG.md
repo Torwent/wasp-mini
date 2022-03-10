@@ -1,3 +1,12 @@
+# [0.3.0](https://github.com/Torwent/MiniWaspBots/compare/v0.2.0...v0.3.0) (2022-03-10)
+
+
+### Features
+
+* **quest helper:** quest helper helper ([bf9924c](https://github.com/Torwent/MiniWaspBots/commit/bf9924ceedfc90c8572425e45c459141e17c9b19))
+
+
+
 # [0.2.0](https://github.com/Torwent/MiniWaspBots/compare/v0.1.0...v0.2.0) (2022-03-08)
 
 
