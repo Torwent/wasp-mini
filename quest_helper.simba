@@ -68,13 +68,16 @@ end;
 
 function TScript.GetState: EState;
 begin
+  if ChooseOption.IsOpen then
+    Exit(WAIT_STATE);
+
   if Chat.HasContinue then
     Exit(CONTINUE_CHAT);
 
   if Self.HasChatOption then
     Exit(CHOOSE_CHAT_OPTION);
 
-  Exit(EState.WAIT_STATE);
+  Exit(WAIT_STATE);
 end;
 
 procedure TScript.Run(MaxActions: Int32; MaxTime: Int64);
