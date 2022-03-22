@@ -1,3 +1,12 @@
+## [0.3.1](https://github.com/Torwent/MiniWaspBots/compare/v0.3.0...v0.3.1) (2022-03-22)
+
+
+### Bug Fixes
+
+* choose options won't auto close anymore ([2e53ccc](https://github.com/Torwent/MiniWaspBots/commit/2e53ccccbd4ecbb582a03a954b420fede754926d))
+
+
+
 # [0.3.0](https://github.com/Torwent/MiniWaspBots/compare/v0.2.0...v0.3.0) (2022-03-10)
 
 
