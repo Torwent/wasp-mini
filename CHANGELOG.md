@@ -1,3 +1,12 @@
+# [0.4.0](https://github.com/Torwent/MiniWaspBots/compare/v0.3.1...v0.4.0) (2022-03-24)
+
+
+### Features
+
+* GH Action to sanitize settings before releases ([9609360](https://github.com/Torwent/MiniWaspBots/commit/96093606a974926bd67c6db02da795477b164ad5))
+
+
+
 ## [0.3.1](https://github.com/Torwent/MiniWaspBots/compare/v0.3.0...v0.3.1) (2022-03-22)
 
 
