@@ -1,0 +1,30 @@
+//Inspired in Slacky's Super Simple™ - Teleporter: https://villavu.com/forum/showthread.php?t=118062
+{$I SRL/osr.simba}
+{$I WaspLib/osr.simba}
+
+var
+  RandomPlayer: TRSPlayer;
+  Spell: ERSSpell;
+begin
+  RandomPlayer.Filter := [False, True, False, False]; //don't use walker, use mmdots, don't use colors, don't use uptext.
+  Mouse.Move(Mouse.Position, 45);
+  while RSClient.IsLoggedIn and
+       (Magic.CanActivate(Spell := ERSSpell.WATCHTOWER_TELEPORT) or
+        Magic.CanActivate(Spell := ERSSpell.ARDOUGNE_TELEPORT)   or
+        Magic.CanActivate(Spell := ERSSpell.CAMELOT_TELEPORT)    or
+        Magic.CanActivate(Spell := ERSSpell.FALADOR_TELEPORT)    or
+        Magic.CanActivate(Spell := ERSSpell.LUMBRIDGE_TELEPORT)  or
+        Magic.CanActivate(Spell := ERSSpell.VARROCK_TELEPORT))   do
+  begin
+    Magic.CastSpell(Spell);
+    Wait(350, 2500);
+
+    if Random(3)   = 0 then Antiban.SmallRandomMouse;
+    if Random(60)  = 0 then Wait(200, 12000, wdLeft);
+    if Random(120) = 0 then RandomPlayer.Hover;
+    if Random(160) = 0 then begin Antiban.SmallRandomMouse; Wait(100, 4200); end;
+    if Random(280) = 0 then Antiban.RandomRotate;
+    if Random(300) = 0 then Antiban.HoverSkill(ERSSkill.MAGIC, SRL.SkewedRand(3700,2700,9999), False);
+    if Random(300) = 0 then Antiban.RandomTab;
+  end;
+end.
