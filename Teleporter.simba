@@ -1,0 +1,43 @@
+//Inspired in Slacky's teleporter: https://villavu.com/forum/showthread.php?t=118062
+{$I SRL/osr.simba}
+{$I WaspLib/osr.simba}
+
+const
+  TELEPORTS = [
+    ERSSpell.WATCHTOWER_TELEPORT,
+    ERSSpell.ARDOUGNE_TELEPORT,
+    ERSSpell.CAMELOT_TELEPORT,
+    ERSSpell.FALADOR_TELEPORT,
+    ERSSpell.LUMBRIDGE_TELEPORT,
+    ERSSpell.VARROCK_TELEPORT
+  ];
+
+var
+  i: Int32;
+  dots: TPointArray;
+begin
+
+  for i := 0 to High(TELEPORTS) do
+
+
+  Mouse.Move(Mouse.Position, 45);
+  while RSClient.IsLoggedIn()                 and
+       (Magic.CastSpell(curr := ERSSpell.WATCHTOWER_TELEPORT) or
+        Magic.CastSpell(curr := ERSSpell.ARDOUGNE_TELEPORT)   or
+        Magic.CastSpell(curr := ERSSpell.CAMELOT_TELEPORT)    or
+        Magic.CastSpell(curr := ERSSpell.FALADOR_TELEPORT)    or
+        Magic.CastSpell(curr := ERSSpell.LUMBRIDGE_TELEPORT)  or
+        Magic.CastSpell(curr := ERSSpell.VARROCK_TELEPORT))   do
+  begin
+    Wait(350, 2500);
+    dots := Minimap.GetDots(ERSMinimapDot.PLAYER);
+
+    if Random(3)   = 0 then Antiban.SmallRandomMouse;
+    if Random(60)  = 0 then Wait(200, 12000, wdLeft);
+    if Random(120) = 0 then Mouse.Move(Minimap.PointToMs(dots[Random(Low(dots), High(dots))]));
+    if Random(160) = 0 then begin Antiban.SmallRandomMouse; Wait(100, 4200); end;
+    if Random(280) = 0 then Antiban.RandomRotate;
+    if Random(300) = 0 then Stats.MouseOver(ERSSkill.MAGIC);
+    if Random(300) = 0 then Antiban.RandomTab;
+  end;
+end.
