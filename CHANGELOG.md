@@ -1,3 +1,12 @@
+# [0.6.0](https://github.com/Torwent/MiniWaspBots/compare/v0.5.0...v0.6.0) (2022-05-08)
+
+
+### Features
+
+* new herbcleaner script ([4ee3391](https://github.com/Torwent/MiniWaspBots/commit/4ee339186db623794eef2837c6a44fa1b277ca1b))
+
+
+
 # [0.5.0](https://github.com/Torwent/MiniWaspBots/compare/v0.4.0...v0.5.0) (2022-05-08)
 
 
@@ -31,15 +40,6 @@
 ### Features
 
 * **quest helper:** quest helper helper ([bf9924c](https://github.com/Torwent/MiniWaspBots/commit/bf9924ceedfc90c8572425e45c459141e17c9b19))
-
-
-
-# [0.2.0](https://github.com/Torwent/MiniWaspBots/compare/v0.1.0...v0.2.0) (2022-03-08)
-
-
-### Features
-
-* **firemaker:** several improvements ([ea2ae0d](https://github.com/Torwent/MiniWaspBots/commit/ea2ae0d712d2d7ae5e40078f942dd29da96b09b3))
 
 
 
