@@ -1,3 +1,12 @@
+# [0.7.0](https://github.com/Torwent/MiniWaspBots/compare/v0.6.0...v0.7.0) (2022-05-08)
+
+
+### Features
+
+* script chainer moved to miniscripts ([88e1785](https://github.com/Torwent/MiniWaspBots/commit/88e17859792218d46d4a79283155abb687975b02))
+
+
+
 # [0.6.0](https://github.com/Torwent/MiniWaspBots/compare/v0.5.0...v0.6.0) (2022-05-08)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * choose options won't auto close anymore ([2e53ccc](https://github.com/Torwent/MiniWaspBots/commit/2e53ccccbd4ecbb582a03a954b420fede754926d))
-
-
-
-# [0.3.0](https://github.com/Torwent/MiniWaspBots/compare/v0.2.0...v0.3.0) (2022-03-10)
-
-
-### Features
-
-* **quest helper:** quest helper helper ([bf9924c](https://github.com/Torwent/MiniWaspBots/commit/bf9924ceedfc90c8572425e45c459141e17c9b19))
 
 
 
