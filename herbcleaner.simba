@@ -1,0 +1,30 @@
+{$DEFINE SRL_USE_REMOTEINPUT}
+{$I SRL/osr.simba}
+{$I WaspLib/osr.simba}
+
+const
+  CleanHerb: TRSItem = 'MY_CLEAN_HERB';
+  DirtyHerb: TRSItem = 'MY_DIRTY_HERB';
+
+var
+  Slots: TIntegerArray;
+
+begin
+  repeat
+    if Inventory.FindItem(DirtyHerb) then
+    begin
+      if Bank.IsOpen then
+        Bank.Close;
+      Inventory.ClickItem(DirtyHerb);
+    end;
+
+    if Inventory.FindItem(CleanHerb) then
+      if Bank.IsOpen then
+        Bank.DepositAll;
+
+    if Bank.IsOpen then
+      Bank.WithdrawItem([DirtyHerb, BANK_WITHDRAW_ALL, False], True);
+
+    Bank.Open(ERSBankLocation.CASTLE_WARS);
+  until not RSClient.IsLoggedIn;
+end.
