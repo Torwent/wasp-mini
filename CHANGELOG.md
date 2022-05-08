@@ -1,3 +1,12 @@
+# [0.5.0](https://github.com/Torwent/MiniWaspBots/compare/v0.4.0...v0.5.0) (2022-05-08)
+
+
+### Features
+
+* new teleporter script ([a4da792](https://github.com/Torwent/MiniWaspBots/commit/a4da792cd561cd58d075b95bd2c9bdd13d492532))
+
+
+
 # [0.4.0](https://github.com/Torwent/MiniWaspBots/compare/v0.3.1...v0.4.0) (2022-03-24)
 
 
@@ -31,15 +40,6 @@
 ### Features
 
 * **firemaker:** several improvements ([ea2ae0d](https://github.com/Torwent/MiniWaspBots/commit/ea2ae0d712d2d7ae5e40078f942dd29da96b09b3))
-
-
-
-# [0.1.0](https://github.com/Torwent/MiniWaspBots/compare/1e8a10866cc71c3546c3e9982cad42fff9dc0b71...v0.1.0) (2022-03-01)
-
-
-### Features
-
-* added github action to autorelease and simba package files ([1e8a108](https://github.com/Torwent/MiniWaspBots/commit/1e8a10866cc71c3546c3e9982cad42fff9dc0b71))
 
 
 
