@@ -1,0 +1,28 @@
+{$DEFINE SCRIPT_CHAIN}
+{$I SRL/osr.simba}
+{$I WaspLib/osr.simba}
+
+begin
+  Login.PlayerIndex     := 0;
+  AntibanEnabled        := True; //Enables Most Antiban
+  BreaksEnabled         := True; //Enables Short Breaks
+  SleepEnabled          := True; //Enables Sleep Breaks
+  RemoteInputEnabled    := True; //Enables Remote Input
+  ProgressReportEnabled := True; //Enables Graphical Progress Report
+  ScriptDebugEnabled    := False; //Enables Script Debugging
+end;
+
+{$SCOPEDENUMS ON}
+  {$I ../Scripts/PremiumWaspBots/anvil_smither.simba}
+  {$I ../Scripts/FreeWaspBots/alcher.simba}
+{$SCOPEDENUMS OFF}
+
+begin
+  MetalItem := 'Rune 2h sword';
+
+  while True do
+  begin
+    Smither.Run(MaxActions, MaxTime);  //Main function of the first script
+    Alcher.Run(MaxActions, MaxTime);   //Main function of the second script
+  end;
+end.
