@@ -13,18 +13,18 @@ begin
   repeat
     if Inventory.FindItem(DirtyHerb) then
     begin
-      if Bank.IsOpen then
-        Bank.Close;
+      if Bank.IsOpen() then
+        Bank.Close();
       Inventory.ClickItem(DirtyHerb);
     end;
 
     if Inventory.FindItem(CleanHerb) then
-      if Bank.IsOpen then
+      if Bank.IsOpen() then
         Bank.DepositAll;
 
-    if Bank.IsOpen then
+    if Bank.IsOpen() then
       Bank.WithdrawItem([DirtyHerb, BANK_WITHDRAW_ALL, False], True);
 
     Bank.Open(ERSBankLocation.CASTLE_WARS);
-  until not RSClient.IsLoggedIn;
+  until not RSClient.IsLoggedIn();
 end.

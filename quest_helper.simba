@@ -1,5 +1,4 @@
 //This script is made to be used with runelite and quest helper
-{$DEFINE SRL_USE_REMOTEINPUT}
 {$I SRL/osr.simba}
 {$I WaspLib/osr.simba}
 
@@ -9,7 +8,7 @@ begin
   BreaksEnabled         := True; //Enables Short Breaks
   SleepEnabled          := True; //Enables Sleep Breaks
   RemoteInputEnabled    := True; //Enables Remote Input
-  ProgressReportEnabled := True; //Enables Graphical Progress Report
+  ProgressReportEnabled := False; //Enables Graphical Progress Report
   ScriptDebugEnabled    := False; //Enables Script Debugging
 end;
 
@@ -24,7 +23,7 @@ type
     State: EState;
   end;
 
-procedure TAntiban.Setup; override;
+procedure TAntiban.Setup(); override;
 begin
   inherited;
 
@@ -35,12 +34,12 @@ end;
 
 procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
 begin
-  Name := 'Quest Helper';
+  Self.Name := 'Quest Helper';
 
   inherited;
 
-  if not RSClient.IsLoggedIn then
-    Login.LoginPlayer;
+  if not RSClient.IsLoggedIn() then
+    Login.LoginPlayer();
 end;
 
 
@@ -66,9 +65,9 @@ end;
 
 
 
-function TScript.GetState: EState;
+function TScript.GetState(): EState;
 begin
-  if ChooseOption.IsOpen then
+  if ChooseOption.IsOpen() then
     Exit(WAIT_STATE);
 
   if Chat.HasContinue then
@@ -82,15 +81,15 @@ end;
 
 procedure TScript.Run(MaxActions: Int32; MaxTime: Int64);
 begin
-  ClearDebug;
+  ClearDebug();
   Self.Init(MaxActions, MaxTime);
 
   repeat
-    State := Self.GetState;
-    Action := ToStr(State);
-    Self.ProcessWhileWaiting;
+    Self.State := Self.GetState();
+    Self.SetAction(ToStr(Self.State));
+    
 
-    case State of
+    case Self.State of
       WAIT_STATE: Wait(500, 800);
       CONTINUE_CHAT: Chat.ClickContinue(True);
       CHOOSE_CHAT_OPTION: Self.ChooseChatOption;

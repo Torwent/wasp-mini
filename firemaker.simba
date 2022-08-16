@@ -52,7 +52,7 @@ type
   end;
 
 
-procedure TAntiban.Setup; override;
+procedure TAntiban.Setup(); override;
 begin
   inherited;
 
@@ -81,12 +81,12 @@ end;
 
 procedure TLogBurner.Init(MaxActions: Int32; MaxTime: Int64); override;
 begin
-  Name := 'AIO Firemaker';
+  Self.Name := 'AIO Firemaker';
 
   inherited;
 
-  RSW.Setup('x7789y2306');
-  ScriptBank := @RSObjects.VarrockWestBank;
+  Self.RSW.Setup('x7789y2306');
+  Self..ScriptBank := RSObjects.VarrockWestBank;
 
   Self.SetupLogs;
   Tool := ['Tinderbox', 1, False];
@@ -98,15 +98,15 @@ begin
   Fire := RSObjects.BurningFire;
   BurnTimer.Setup(30000);
 
-  if not RSClient.IsLoggedIn then
-    Login.LoginPlayer;
+  if not RSClient.IsLoggedIn() then
+    Login.LoginPlayer();
 
   if not Inventory.FindItem(Tool.Item, ToolSlot) then
     ToolSlot := -1;
 
   if ScriptDebugEnabled then
   begin
-    DebugObjectArray += ScriptBank;
+    DebugObjectArray += Self.ScriptBank;
     DebugObjectArray += @Fire;
   end;
 end;
@@ -120,7 +120,7 @@ begin
   TPA := [Minimap.VecToMS(Vec3(Center.X - 1, Center.Y, 3), A),
           Minimap.VecToMS(Vec3(Center.X + 1, Center.Y, -3), A)];
 
-  Result := TPA.Bounds;
+  Result := TPA.Bounds();
 end;
 
 procedure TLogBurner.ChangeStartingPoint;
@@ -136,14 +136,14 @@ end;
 function TLogBurner.SmallStep: Boolean;
 var
   Tile: TPoint;
-  Tiles: TPointArray := PopulateTile(RSW.GetMyPos, [1, 1, 0, 0]);
+  Tiles: TPointArray := PopulateTile(Self.RSW.GetMyPos, [1, 1, 0, 0]);
 begin
   for Tile in Tiles do
   begin
     Fire.TileArray := [Tile];
     if Fire.Find then
     begin
-      RSW.WebWalk(Tile, 1, 0.2);
+      Self.RSW.WebWalk(Tile, 1, 0.2);
       Exit(True);
     end;
   end;
@@ -151,18 +151,18 @@ end;
 
 function TLogBurner.WalkNextPoint: Boolean;
 begin
-  if Result := RSW.WebWalk(NextStartingPoint) then
+  if Result := Self.RSW.WebWalk(NextStartingPoint) then
      Self.ChangeStartingPoint;
 end;
 
 function TLogBurner.Teleport: Boolean;
 begin
-  if Magic.Open and not Magic.CanActivate(ERSSPell.VARROCK_TELEPORT) then
+  if Magic.Open() and not Magic.CanActivate(ERSSPell.VARROCK_TELEPORT) then
     Self.WalkNextPoint
   else if Magic.CastSpell(ERSSpell.VARROCK_TELEPORT) then
     Wait(1200);
 
-  Result := WaitUntil(RSW.AtTile(NextStartingPoint, 40), 100, 9000);
+  Result := WaitUntil(Self.RSW.AtTile(NextStartingPoint, 40), 100, 9000);
 
   if Result then
     Wait(1200);
@@ -174,12 +174,12 @@ var
   UseQuantityButton: Boolean := Item.Quantity <> 1;
   InvCount: Int32;
 begin
-  if BankTab = -1 then
-    BankTab := Bank.FindItemTab(Item.Item);
+  if Self.BankTab = -1 then
+    Self.BankTab := Bank.FindItemTab(Item.Item);
 
-  InvCount := Inventory.Count;
-  if Result := Bank.WithdrawItem(BankTab, Item, UseQuantityButton) then
-    WaitUntil(Inventory.Count > InvCount, 100, 3000);
+  InvCount := Inventory.Count();
+  if Result := Bank.WithdrawItem(Self.BankTab, Item, UseQuantityButton) then
+    WaitUntil(Inventory.Count() > InvCount, 100, 3000);
 
 end;
 
@@ -198,7 +198,7 @@ begin
       BurnTimer.Restart(Random(-3000, 0));
       repeat
         Wait(100);
-        if Chat.LeveledUp then
+        if Chat.LeveledUp() then
         begin
           Inventory.SetSelectedItem(ToolSlot);
           Mouse.Move(MainScreen.GetPlayerFloorBox);
@@ -207,28 +207,28 @@ begin
           else
             Break;
         end;
-      until BurnTimer.IsFinished or XPBar.EarnedXP;
+      until BurnTimer.IsFinished() or XPBar.EarnedXP();
     end;
   end;
 end;
 
 
-function TLogBurner.GetState: EBurnerState;
+function TLogBurner.GetState(): EBurnerState;
 var
   MyPos: TPoint;
 begin
-  if WL.Activity.IsFinished then
+  if WL.Activity.IsFinished() then
     Exit(EBurnerState.END_SCRIPT);
 
-  if ChooseOption.IsOpen then
+  if ChooseOption.IsOpen() then
     Exit(EBurnerState.CLOSE_CONTEXT);
 
-  if Chat.LeveledUp then
+  if Chat.LeveledUp() then
     Exit(EBurnerState.LEVEL_UP);
 
-  if MainScreen.HasInterface then
+  if MainScreen.HasInterface() then
   begin
-    if Bank.IsOpen then
+    if Bank.IsOpen() then
     begin
       if Inventory.FindItem(Tool.Item) and Inventory.FindItem(Material.Item) then
         Exit(EBurnerState.CLOSE_INTERFACE);
@@ -243,11 +243,11 @@ begin
 
   if (Inventory.IsSlotUsed(ToolSlot) or Inventory.FindItem(Tool.Item, ToolSlot)) and Inventory.FindItem(Material.Item) then
   begin
-    MyPos := RSW.GetMyPos;
-    if MyPos.WithinDistance(ScriptBank^.TileArray, 10) then
+    MyPos := Self.RSW.GetMyPos();
+    if MyPos.WithinDistance(Self.ScriptBank.TileArray, 10) then
       Exit(EBurnerState.TELEPORT);
 
-    if Inventory.IsFull and not MyPos.WithinDistance(NextStartingPoint, 4) then
+    if Inventory.IsFull() and not MyPos.WithinDistance(NextStartingPoint, 4) then
     begin
       if Fire.Find then
         Exit(EBurnerState.CHANGE_START);
@@ -258,37 +258,37 @@ begin
     Exit(EBurnerState.BURN_LOG);
   end;
 
-  Exit(EBurnerState.OPEN_BANK);
+  Exit(EBurnerState.Open()_BANK);
 end;
 
 procedure TLogBurner.Run(MaxActions: Int32; MaxTime: Int64);
 begin
-  ClearDebug;
+  ClearDebug();
   Self.Init(MaxActions, MaxTime);
 
   repeat
-    State := Self.GetState;
-    Action := ToStr(State);
-    Self.ProcessWhileWaiting;
+    Self.State := Self.GetState();
+    Self.SetAction(ToStr(Self.State));
+    
 
-    case State of
+    case Self.State of
       EBurnerState.WAIT_STATE: Wait(800, 850);
       EBurnerState.BURN_LOG: Self.BurnLogs;
       EBurnerState.CHANGE_START: Self.ChangeStartingPoint;
       EBurnerState.SMALL_STEP: Self.SmallStep;
-      EBurnerState.OPEN_BANK: Bank.WalkOpen(ScriptBank);
+      EBurnerState.Open()_BANK: Bank.WalkOpen(Self.ScriptBank);
       EBurnerState.WITHDRAW_LOG: Self.Withdraw(Material);
       EBurnerState.WITHDRAW_TOOL: Self.Withdraw(Tool);
-      EBurnerState.CLOSE_INTERFACE: MainScreen.CloseInterface;
+      EBurnerState.CLOSE_INTERFACE: MainScreen.CloseInterface();
       EBurnerState.TELEPORT: Self.Teleport;
       EBurnerState.WALK_SPOT: Self.WalkNextPoint;
       EBurnerState.LEVEL_UP: Chat.HandleLevelUp(True);
-      EBurnerState.CLOSE_CONTEXT: ChooseOption.Close;
+      EBurnerState.CLOSE_CONTEXT: ChooseOption.Close();
       EBurnerState.END_SCRIPT: Break;
     end;
 
-    Self.DoAntiban;
-  until Self.ShouldStop;
+    Self.DoAntiban();
+  until Self.ShouldStop();
 end;
 
 var
@@ -300,7 +300,7 @@ begin
 end;
 
 type
-  TBurnerConfig = record(TScriptConfig)
+  TBurnerConfig = record(TScriptForm)
     LogSelector: TLabeledCombobox;
   end;
 
@@ -308,19 +308,19 @@ procedure TBurnerConfig.StartScript(Sender: TObject);
 begin
   Self.Init(Sender);
 
-  CurrentLogs := ERSLogs(LogSelector.Combobox.getItemIndex);
+  CurrentLogs := ERSLogs(LogSelector.Combobox.getItemIndex());
 end;
 
-procedure TBurnerConfig.Setup; override;
+procedure TBurnerConfig.Setup(); override;
 begin
   inherited;
 
   with LogSelector do
   begin
-    Init(ScriptSettingsPanel);
+    Init(Self.SSPanel.Panel); 
     SetCaption('Logs:');
-    SetLeft(ScriptSettingsLabel.getLeft + 5);
-    SetTop(ScriptSettingsLabel.getTop + ScriptSettingsLabel.getHeight);
+    SetLeft(5);  
+    SetTop(35);
     SetWidth(200);
     Combobox.setStyle(csDropDownList);
     AddItem('Regular');
@@ -338,12 +338,12 @@ begin
     Combobox.setItemIndex(Ord(CurrentLogs));
   end;
 
-  StartButton.setOnClick(@Self.StartScript);
+  Self.WLPanel.StartButton.setOnClick(@Self.StartScript);
 end;
 
-procedure TBurnerConfig.Run; override;
+procedure TBurnerConfig.Run(); override;
 begin
-  Self.Setup;
+  Self.Setup();
 
   inherited;
 end;

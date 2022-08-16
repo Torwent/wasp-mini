@@ -8,7 +8,7 @@ var
 begin
   RandomPlayer.Filter := [False, True, False, False]; //don't use walker, use mmdots, don't use colors, don't use uptext.
   Mouse.Move(Mouse.Position, 45);
-  while RSClient.IsLoggedIn and
+  while RSClient.IsLoggedIn() and
        (Magic.CanActivate(Spell := ERSSpell.WATCHTOWER_TELEPORT) or
         Magic.CanActivate(Spell := ERSSpell.ARDOUGNE_TELEPORT)   or
         Magic.CanActivate(Spell := ERSSpell.CAMELOT_TELEPORT)    or

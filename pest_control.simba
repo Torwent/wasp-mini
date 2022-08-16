@@ -35,7 +35,7 @@ type
     Center: TPoint;
     CombatLevel: Int32;
     PCLevel: Int32;
-    PCPlank: PRSObject;
+    PCPlank: TRSObject;
     BoatPoly: TPointArray;
     OnTower: Boolean;
   end;
@@ -71,7 +71,7 @@ begin
   end;
 end;
 
-procedure TAntiban.Setup; override;
+procedure TAntiban.Setup(); override;
 begin
   inherited;
 
@@ -82,11 +82,11 @@ end;
 
 procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
 begin
-  Name := 'Pest Control';
+  Self.Name := 'Pest Control';
 
   inherited;
 
-  RSW.Setup('x7453y3963');
+  Self.RSW.Setup('x7453y3963');
   Center := [7660, 4480];
 
   RSMonsters.AnyMonster.UpText := ['Attack'];
@@ -96,8 +96,8 @@ begin
 
   Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
 
-  if not RSClient.IsLoggedIn then
-    Login.LoginPlayer;
+  if not RSClient.IsLoggedIn() then
+    Login.LoginPlayer();
 
   Options.SetNPCAttackOption(ERSAttackOption.ALWAYS_LEFT_CLICK);
 
@@ -123,10 +123,10 @@ end;
 
 function TScript.EnterBoat: Boolean;
 begin
-  if PCPlank^.WalkClick then
+  if PCPlank^.WalkClick() then
   begin
-    Minimap.WaitMoving;
-    Result := WaitUntil(Self.InBoat(RSW.GetMyPos), 100, 10000);
+    Minimap.WaitMoving();
+    Result := WaitUntil(Self.InBoat(Self.RSW.GetMyPos), 100, 10000);
   end;
 end;
 
@@ -135,14 +135,14 @@ function TScript.WalkSpot: Boolean;
 var
   TPA: TPointArray := PopulateTile(Center, 4);
 begin
-  Result := RSW.WebWalk(TPA.RandomPoint, 8, 0.2);
+  Result := Self.RSW.WebWalk(TPA.RandomPoint, 8, 0.2);
 end;
 
-function TScript.GetState: EState;
+function TScript.GetState(): EState;
 var
-  Pos: TPoint := RSW.GetMyPos;
+  Pos: TPoint := Self.RSW.GetMyPos();
 begin
-  if WL.Activity.IsFinished then
+  if WL.Activity.IsFinished() then
     Exit(END_SCRIPT);
 
   if Self.InIsland(Pos) then
@@ -172,17 +172,17 @@ end;
 
 procedure TScript.Run(MaxActions: Int32; MaxTime: Int64);
 begin
-  ClearDebug;
+  ClearDebug();
   Self.Init(MaxActions, MaxTime);
 
   repeat
-    State := Self.GetState;
-    Action := ToStr(State);
-    ExtraInfo := ' Combat level: ' + ToStr(CombatLevel) +
+    Self.State := Self.GetState();
+    Self.SetAction(ToStr(Self.State));
+    Self.ExtraInfo := ' Combat level: ' + ToStr(CombatLevel) +
                  ' CombatStyle: ' + ToStr(CombatHandler.CombatStyle.CombatType);
-    Self.ProcessWhileWaiting;
+    
 
-    case State of
+    case Self.State of
       WAIT_STATE: Wait(500, 800);
 
       ENABLE_PRAYER: Minimap.EnablePrayer;
@@ -196,8 +196,8 @@ begin
       END_SCRIPT: Break;
     end;
 
-    Self.DoAntiban;
-  until Self.ShouldStop;
+    Self.DoAntiban();
+  until Self.ShouldStop();
 end;
 
 var
@@ -207,7 +207,7 @@ function TRSMainScreen.InCombat: Boolean; override;
 begin
   Result := inherited;
 
-  if Result then WL.Activity.Restart;
+  if Result then WL.Activity.Restart();
 end;
 
 function TWebGraph.PathBetween(p,q: TPoint; Rnd:Double=0): TPointArray; constref; override;
@@ -264,7 +264,7 @@ begin
 end;
 
 type
-  TConfig = record(TScriptConfig)
+  TConfig = record(TScriptForm)
     InfoBox: TLabel;
   end;
 
@@ -272,35 +272,35 @@ procedure TConfig.StartScript(Sender: TObject);
 begin
   Self.Init(Sender);
 
-  //CurrentTask := ETask(Selector.Combobox.getItemIndex);
+  //CurrentTask := ETask(Selector.Combobox.getItemIndex());
 
-  MaxActions := StrToInt(Self.ActionLimit.GetText);
-  MaxTime    := StrToInt64(Self.TimeLimit.GetText);
+  MaxActions := StrToInt(Self.ActionLimit.getText());
+  MaxTime    := StrToInt64(Self.TimeLimit.getText());
 end;
 
-procedure TConfig.Setup; override;
+procedure TConfig.Setup(); override;
 begin
   inherited;
 
   with InfoBox do
   begin
-    Init(ScriptSettingsPanel);
+    Init(Self.SSPanel.Panel); 
     setParent(ScriptSettingsPanel);
     setCaption(
       'Using a ranged weapon is recommended.' + STR_NEW_LINE +
       'This will use your quick prayers, make sure you set them up in advance.'
     );
-    SetLeft(ScriptSettingsLabel.getLeft + 5);
-    SetTop(ScriptSettingsLabel.getTop + ScriptSettingsLabel.getHeight + 5);
+    SetLeft(5);  
+    SetTop(5);
     SetWidth(200);
   end;
 
-  StartButton.setOnClick(@Self.StartScript);
+  Self.WLPanel.StartButton.setOnClick(@Self.StartScript);
 end;
 
-procedure TConfig.Run; override;
+procedure TConfig.Run(); override;
 begin
-  Self.Setup;
+  Self.Setup();
 
   inherited;
 end;
