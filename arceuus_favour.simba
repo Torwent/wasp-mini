@@ -1,0 +1,59 @@
+(*
+  This is for Simba1500.
+  This requires 25% Arceuus favour to start.
+  Start at the dense mine with any pickaxe equipped or in your inventory and a chisel.
+*)
+{$I SRL/osr.simba}
+{$I WaspLib/osr.simba}
+
+var
+  RSW: TRSWalker;
+  IsMining: Boolean;
+
+function WaitMining(): Boolean;
+var
+  InvFull: Boolean;
+begin
+  Result := IsMining := WaitUntil((InvFull := Inventory.IsFull()) or XPBar.EarnedXP(), 100, 6000);
+
+  if Result and InvFull then
+    Result := IsMining := False;
+end;
+
+procedure EmptyInv();
+begin
+  IsMining := False;
+
+  repeat
+    if Chat.HasContinue() then
+    begin
+      if Chat.ClickContinue() then
+        WaitUntil('Donate' in Chat.GetChatTitle(), 100, 5000);
+    end
+    else if 'Donate' in Chat.GetChatTitle() then
+    begin
+      if Chat.ClickOption('Yes') then
+        WaitUntil(not Inventory.IsFull(), 100, 5000);
+    end
+    else
+    begin
+      if RSNPCs.Clerris.WalkClick() then
+        WaitUntil(Chat.HasContinue(), 100, 15000);
+    end;
+  until not Inventory.IsFull();
+end;
+
+
+begin
+  Self.RSW.Setup(KOUREND_RUNECRAFTING_MAP);
+
+  while True do
+  begin
+    if Inventory.IsFull() then
+      EmptyInv()
+    else if IsMining then
+      WaitMining()
+    else if RSObjects.DenseRunestone.WalkClick(True, 5) then
+      IsMining := XPBar.WaitXP(10000);
+  end;
+end;
