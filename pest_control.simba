@@ -93,7 +93,7 @@ begin
   RSMonsters.AnyMonster.UpText := ['Attack'];
   RSMonsters.AnyMonster.SetupCommon(50, 5, [Center]);
   RSMonsters.AnyMonster.DotFilter.Setup([7655, 4483, 3], False);
-  CombatHandler.Setup(@RSMonsters.AnyMonster, 100);
+  CombatHandler.Setup(@RSMonsters.AnyMonster, 1200);
 
   Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
 
@@ -173,7 +173,7 @@ begin
       if not Minimap.IsPrayerEnabled and (Minimap.GetPrayerLevel > 5) then
         Exit(ENABLE_PRAYER);
 
-      if not MainScreen.WaitInCombat(750) then
+      if not MainScreen.WaitInCombat(1200) then
         Exit(ATTACK);
 
       Exit(IN_COMBAT);
@@ -208,7 +208,7 @@ begin
       WALK_CENTER: Self.WalkSpot;
 
       ATTACK:     CombatHandler.WalkAttackMonster;
-      IN_COMBAT:  MainScreen.WaitInCombat(750);
+      IN_COMBAT:  MainScreen.WaitInCombat(1200);
       END_SCRIPT: Break;
     end;
 
