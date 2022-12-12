@@ -1,10 +1,16 @@
 {$DEFINE SRL_USE_REMOTEINPUT}
 {$IFDEF WINDOWS}{$DEFINE SCRIPT_GUI}{$ENDIF}
-{$I SRL/osr.simba}
+{$I SRL-t/osr.simba}
 {$I WaspLib/osr.simba}
 
 begin
-  Login.PlayerIndex := 0;
+  Login.PlayerIndex     := 0;
+  AntibanEnabled        := True; //Enables Most Antiban
+  BreaksEnabled         := True; //Enables Short Breaks
+  SleepEnabled          := True; //Enables Sleep Breaks
+  RemoteInputEnabled    := False; //Enables Remote Input
+  ProgressReportEnabled := True; //Enables Graphical Progress Report
+  ScriptDebugEnabled    := True; //Enables Script Debugging
 end;
 
 type
@@ -14,6 +20,7 @@ type
     ENABLE_PRAYER,
     DISABLE_QPRAY,
 
+    HEAL_PLAYER,
     ENTER_BOAT,
     WALK_CENTER,
 
@@ -42,21 +49,21 @@ begin
   case CombatLevel of
     40..69:
       begin
-        PCPlank := @RSObjects.PestControlNovicePlank;
+        PCPlank := RSObjects.PestControlNovicePlank;
         PCLevel := 0;
         BoatPoly := [[7670, 4186], [7689, 4186], [7689, 4214], [7670, 4214]];
       end;
 
     70..99:
       begin
-        PCPlank := @RSObjects.PestControlIntermidiatePlank;
+        PCPlank := RSObjects.PestControlIntermidiatePlank;
         PCLevel := 1;
         BoatPoly := [[7582, 4170], [7601, 4170], [7601, 4199], [7582, 4199]];
       end;
 
     100..126:
       begin
-        PCPlank := @RSObjects.PestControlVeteranPlank;
+        PCPlank := RSObjects.PestControlVeteranPlank;
         PCLevel := 2;
         BoatPoly := [[7558, 4142], [7577, 4142], [7577, 4170], [7558, 4170]];
       end;
@@ -81,12 +88,12 @@ begin
   inherited;
 
   Self.RSW.Setup('x7453y3963');
-  Center := [7660, 4480];
+  Center := [7662, 4550];
 
   RSMonsters.AnyMonster.UpText := ['Attack'];
-  RSMonsters.AnyMonster.SetupCommon(55, 5, [Center]);
+  RSMonsters.AnyMonster.SetupCommon(50, 5, [Center]);
   RSMonsters.AnyMonster.DotFilter.Setup([7655, 4483, 3], False);
-  CombatHandler.Setup(@RSMonsters.AnyMonster, 3000);
+  CombatHandler.Setup(@RSMonsters.AnyMonster, 1200);
 
   Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
 
@@ -117,19 +124,36 @@ end;
 
 function TScript.EnterBoat: Boolean;
 begin
-  if PCPlank^.WalkClick() then
+  if PCPlank.WalkClick() then
   begin
     Minimap.WaitMoving();
     Result := WaitUntil(Self.InBoat(Self.RSW.GetMyPos), 100, 10000);
   end;
 end;
 
+function TScript.PlayerLowHP: Boolean;
+begin
+  Result := (MainScreen.IsClassicOpen and (Minimap.GetHPPercent <= 60)) or
+                       (Minimap.GetHPPercent <= 60);
+end;
+
+function TScript.Heal: Boolean;
+var
+  MinPercent: Int32 := Random(60, 90);
+  Slots: TIntegerArray;
+begin
+  repeat
+    if not Inventory.Consume(HEALTH_CONSUMABLE, Slots) then
+      Exit;
+    Wait(300, 500);
+  until Result := (Minimap.GetHPPercent >= MinPercent);
+end;
 
 function TScript.WalkSpot: Boolean;
 var
-  TPA: TPointArray := PopulateTile(Center, 4);
+  TPA: TPointArray := PopulateTile(Center, 2);
 begin
-  Result := Self.RSW.WebWalk(TPA.RandomPoint, 8, 0.2);
+  Result := Self.RSW.WebWalk(TPA, 8, 0.2);
 end;
 
 function TScript.GetState(): EState;
@@ -141,17 +165,19 @@ begin
 
   if Self.InIsland(Pos) then
   begin
-    if Pos.WithinDistance(Center, 15) then
+    if PlayerLowHP and Inventory.FindConsumable(HEALTH_CONSUMABLE) then
+      Exit(HEAL_PLAYER)
+
+    if Pos.WithinDistance(Center, 35) then
     begin
       if not Minimap.IsPrayerEnabled and (Minimap.GetPrayerLevel > 5) then
         Exit(ENABLE_PRAYER);
 
-      if not MainScreen.WaitInCombat(2000) then
+      if not MainScreen.WaitInCombat(1200) then
         Exit(ATTACK);
 
       Exit(IN_COMBAT);
     end;
-
     Exit(WALK_CENTER);
   end;
 
@@ -171,22 +197,18 @@ begin
 
   repeat
     Self.State := Self.GetState();
-    Self.SetAction(ToStr(Self.State));
-    Self.ExtraInfo := ' Combat level: ' + ToStr(CombatLevel) +
-                 ' CombatStyle: ' + ToStr(CombatHandler.CombatStyle.CombatType);
-    
-
+    writeln(self.state);
     case Self.State of
       WAIT_STATE: Wait(500, 800);
 
       ENABLE_PRAYER: Minimap.EnablePrayer;
       DISABLE_QPRAY: Minimap.DisablePrayer;
-
+      HEAL_PLAYER: SELF.HEAL;
       ENTER_BOAT:  Self.EnterBoat;
       WALK_CENTER: Self.WalkSpot;
 
       ATTACK:     CombatHandler.WalkAttackMonster;
-      IN_COMBAT:  MainScreen.WaitInCombat(3000);
+      IN_COMBAT:  MainScreen.WaitInCombat(1200);
       END_SCRIPT: Break;
     end;
 
@@ -258,14 +280,14 @@ begin
 end;
 
 type
-  TConfig = record(TScriptForm)
+  TConfig = record(TScriptConfig)
     InfoBox: TLabel;
   end;
 
 procedure TConfig.StartScript(Sender: TObject);
 begin
   Self.Init(Sender);
-
+  FoodManager.MinInvPoints := 20;
   //CurrentTask := ETask(Selector.Combobox.getItemIndex());
 
   MaxActions := StrToInt(Self.ActionLimit.getText());
@@ -278,18 +300,17 @@ begin
 
   with InfoBox do
   begin
-    Init(Self.SSPanel.Panel); 
+    Init(Self.ScriptSettingsPanel);
     setParent(ScriptSettingsPanel);
     setCaption(
       'Using a ranged weapon is recommended.' + STR_NEW_LINE +
       'This will use your quick prayers, make sure you set them up in advance.'
     );
-    SetLeft(5);  
+    SetLeft(5);
     SetTop(5);
     SetWidth(200);
   end;
-
-  Self.WLPanel.StartButton.setOnClick(@Self.StartScript);
+  Self.StartButton.setOnClick(@Self.StartScript);
 end;
 
 procedure TConfig.Run(); override;
