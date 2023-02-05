@@ -69,11 +69,11 @@ end;
 
 procedure TAntiban.Setup(); override;
 begin
-  inherited;
 
   Antiban.Skills := [ERSSkill.TOTAL];
   Antiban.MinZoom := 15;
   Antiban.MaxZoom := 40;
+  inherited;  
 end;
 
 procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
