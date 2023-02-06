@@ -5,8 +5,6 @@
 
 begin
   Login.PlayerIndex := 0;
-  Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
-    RSHeightmap.Enabled := False;
 end;
 
 type
