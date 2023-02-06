@@ -1,10 +1,12 @@
 {$DEFINE SRL_USE_REMOTEINPUT}
-{$IFDEF WINDOWS}{$DEFINE SCRIPT_GUI}{$ENDIF}
+{$IFDEF WINDOWS}{.$DEFINE SCRIPT_GUI}{$ENDIF}
 {$I SRL-t/osr.simba}
 {$I WaspLib/osr.simba}
 
 begin
   Login.PlayerIndex := 0;
+  Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
+    RSHeightmap.Enabled := False;
 end;
 
 type
@@ -43,23 +45,23 @@ begin
   case CombatLevel of
     40..69:
       begin
-        PCPlank := RSObjects.PestControlNovicePlank;
+        PCPlank := RSObjects.PestControlNovicePlank;   //planks hard to easy [[6127, 4699], [6152, 4736], [6211, 4756]];
         PCLevel := 0;
-        BoatPoly := [[7670, 4186], [7689, 4186], [7689, 4214], [7670, 4214]];
+        BoatPoly := [[6215, 4738], [6215, 4763], [6233, 4763], [6233, 4738]];
       end;
 
     70..99:
       begin
         PCPlank := RSObjects.PestControlIntermidiatePlank;
         PCLevel := 1;
-        BoatPoly := [[7582, 4170], [7601, 4170], [7601, 4199], [7582, 4199]];
+        BoatPoly := [[6128, 4721], [6145, 4721], [6145, 4748], [6128, 4748]];
       end;
 
     100..126:
       begin
         PCPlank := RSObjects.PestControlVeteranPlank;
         PCLevel := 2;
-        BoatPoly := [[7558, 4142], [7577, 4142], [7577, 4170], [7558, 4170]];
+        BoatPoly := [[6104, 4693], [6121, 4693], [6121, 4721], [6104, 4721]];
       end;
 
     else TerminateScript('We don''t have enough combat level for pest control.');
@@ -68,11 +70,12 @@ end;
 
 procedure TAntiban.Setup(); override;
 begin
-  inherited;
+
 
   Antiban.Skills := [ERSSkill.TOTAL];
   Antiban.MinZoom := 15;
   Antiban.MaxZoom := 40;
+  inherited;
 end;
 
 procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
@@ -81,20 +84,25 @@ begin
 
   inherited;
 
-  Self.RSW.Setup('x7453y3963');
-  Center := [7662, 4550];
+  Self.RSW.Setup([RSRegions.PEST_CONTROL_ISLAND, RSRegions.PEST_CONTROL_OUTPOST]);
+  Center := [5760, 5688];
 
   RSMonsters.AnyMonster.UpText := ['Attack'];
-  RSMonsters.AnyMonster.SetupCommon(50, 5, [Center]);
-  RSMonsters.AnyMonster.DotFilter.Setup([7655, 4483, 3], False);
-  CombatHandler.Setup(@RSMonsters.AnyMonster, 1200);
+  RSMonsters.AnyMonster.Setup(50, 5, [Center]);
+  RSMonsters.AnyMonster.DotFilter.Setup([5752, 5625, 3], False);
+  RSMonsters.AnyMonster.Filter.MinimapDot := True;
+  RSMonsters.AnyMonster.Filter.UpText := True;
+  CombatHandler.Setup(RSMonsters.AnyMonster, 1200);
 
   Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
 
   if not RSClient.IsLoggedIn() then
     Login.LoginPlayer();
-
-  Options.SetNPCAttackOption(ERSAttackOption.ALWAYS_LEFT_CLICK);
+  if WLSettings.RemoteInput.ScriptDebug then
+  begin
+    //DebugNPCArray += TRSNPC(RSMonsters.AnyMonster);
+  end;
+  //Options.SetNPCAttackOption(ERSAttackOption.ALWAYS_LEFT_CLICK);
 
   Self.SetupDifficulty;
 end;
@@ -102,7 +110,7 @@ end;
 
 function TScript.InIsland(Pos: TPoint): Boolean;
 begin
-  Result := Pos.Y > 4300;
+  Result := Pos.Y > 5000;
 
   if Result then
     CombatHandler.InCombatTimer.Resume
@@ -137,7 +145,7 @@ var
   Slots: TIntegerArray;
 begin
   repeat
-    if not Inventory.Consume(HEALTH_CONSUMABLE, Slots) then
+    if not Inventory.Consume(ERSConsumable.FOOD_CONSUMABLE) then
       Exit;
     Wait(300, 500);
   until Result := (Minimap.GetHPPercent >= MinPercent);
@@ -159,7 +167,7 @@ begin
 
   if Self.InIsland(Pos) then
   begin
-    if PlayerLowHP and Inventory.FindConsumable(HEALTH_CONSUMABLE) then
+    if PlayerLowHP and Inventory.ContainsAny(FOOD_ARRAY) then
       Exit(HEAL_PLAYER)
 
     if Pos.WithinDistance(Center, 35) then
@@ -240,6 +248,29 @@ begin
   Result += q;
 end;
 
+function TRSWalkerObject._SelectHelper(action: TStringArray): Boolean;  override;
+begin
+  if TRSWalkerObject.CurrentUpText <> [] then
+    TRSWalkerObject.CurrentUpText := [];
+
+  if TRSWalkerObject.RedClicked then
+  begin
+    TRSWalkerObject.RedClicked := False;
+    Exit(True);
+  end;
+
+  if ChooseOption.IsOpen() and ChooseOption.Select(action) then
+    Exit(True);
+
+  if MainScreen.IsUpText(action) then
+  begin
+    Mouse.Click(MOUSE_LEFT);
+    Exit(MainScreen.DidRedClick());
+  end;
+
+  Result := False;
+end;
+
 function TRSWalker.Click(MinimapPoint: TPoint; Randomness: Int32): Boolean; override;
 var
   P: TPoint;
@@ -273,19 +304,20 @@ begin
     end;
 end;
 
+{$IFDEF SCRIPT_GUI}
 type
-  TConfig = record(TScriptConfig)
+  TConfig = record(TScriptForm)
     InfoBox: TLabel;
   end;
 
 procedure TConfig.StartScript(Sender: TObject);
 begin
   Self.Init(Sender);
-  FoodManager.MinInvPoints := 20;
+  //FoodManager.MinInvPoints := 20;
   //CurrentTask := ETask(Selector.Combobox.getItemIndex());
 
-  MaxActions := StrToInt(Self.ActionLimit.getText());
-  MaxTime    := StrToInt64(Self.TimeLimit.getText());
+  //MaxActions := StrToInt(Self.ActionLimit.getText());
+  //MaxTime    := StrToInt64(Self.TimeLimit.getText());
 end;
 
 procedure TConfig.Setup(); override;
@@ -316,10 +348,10 @@ end;
 
 var
   Config: TConfig;
-
+{$ENDIF}
 begin
   {$IFDEF SCRIPT_GUI}
   Sync(@Config.Run);
   {$ENDIF}
-  Script.Run(MaxActions, MaxTime);
+  Script.Run(WLSettings.MaxActions, WLSettings.MaxTime);
 end.
