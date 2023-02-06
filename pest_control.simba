@@ -4,8 +4,9 @@
 {$I WaspLib/osr.simba}
 
 begin
-  Login.PlayerIndex := 6;
+  Login.PlayerIndex := 0;
   Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
+    RSHeightmap.Enabled := False;
 end;
 
 type
@@ -70,10 +71,11 @@ end;
 procedure TAntiban.Setup(); override;
 begin
 
+
   Antiban.Skills := [ERSSkill.TOTAL];
   Antiban.MinZoom := 15;
   Antiban.MaxZoom := 40;
-  inherited;  
+  inherited;
 end;
 
 procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
@@ -89,6 +91,7 @@ begin
   RSMonsters.AnyMonster.Setup(50, 5, [Center]);
   RSMonsters.AnyMonster.DotFilter.Setup([5752, 5625, 3], False);
   RSMonsters.AnyMonster.Filter.MinimapDot := True;
+  RSMonsters.AnyMonster.Filter.UpText := True;
   CombatHandler.Setup(RSMonsters.AnyMonster, 1200);
 
   Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
@@ -99,7 +102,7 @@ begin
   begin
     //DebugNPCArray += TRSNPC(RSMonsters.AnyMonster);
   end;
-  Options.SetNPCAttackOption(ERSAttackOption.ALWAYS_LEFT_CLICK);
+  //Options.SetNPCAttackOption(ERSAttackOption.ALWAYS_LEFT_CLICK);
 
   Self.SetupDifficulty;
 end;
@@ -266,56 +269,6 @@ begin
   end;
 
   Result := False;
-end;
-
-function TRSMMDot._HoverHelper(Attempts: Int32): Boolean; override;
-var
-  Attempt: Int32;
-  ATPA: T2DPointArray;
-  Points: TPointArray;
-  CompassAngle: Double;
-begin
-  if (RSClient.Mode = ERSClientMode.FIXED) and MainScreen.HasInterface then
-    Exit(False);
-
-  if Filter.UpText and MainScreen.IsUpText(UpText) then
-    Exit(True);
-
-  if Filter.MinimapDot and (Minimap.GetDots(DotType) = []) then
-    Exit;
-
-  for Attempt := 0 to Attempts do
-  begin
-    if Self.Find(ATPA) then
-    begin
-      if Attempt < 2 then
-        Points := ATPA[0] // 0 for the closest one.
-      else if Length(ATPA) > (Attempt - 2) then
-        Points := ATPA[Attempt - 2]
-      else
-        Points := ATPA[Random(0, High(ATPA))];
-
-      if Points <> [] then
-      begin
-        if DotType = ERSMinimapDot.ITEM then
-          Mouse.Move(Points.Mean)
-        else
-          Mouse.Move(Points[Random(0, High(Points))]);
-        if not Filter.UpText then
-          Exit(True);
-      end;
-    end;
-
-    if MainScreen.IsUpText(UpText) then
-      Exit(True);
-
-    //will rotate the screen for the last attempt if hasn't hovered properly yet
-    if (DotType <> ERSMinimapDot.ITEM) and (Attempt = (Attempts - 1)) then
-    begin
-      CompassAngle := Minimap.GetCompassAngle + Random(-50, 50);
-      Minimap.SetCompassAngle(CompassAngle, 10);
-    end;
-  end;
 end;
 
 function TRSWalker.Click(MinimapPoint: TPoint; Randomness: Int32): Boolean; override;
