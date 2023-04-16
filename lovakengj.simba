@@ -1,0 +1,69 @@
+{$I SRL-T/osr.simba}
+{$I WaspLib/osr.simba}
+
+var
+  sulphur: TPointArray;
+  IsMining: Boolean;
+
+function FindSulphur(out sulphur: TPointArray): Boolean;
+var
+  atpa: T2DPointArray;
+begin
+  sulphur := [];
+  SRL.FindColors(sulphur, CTS2(8304580, 14, 0.03, 1.08), MainScreen.Bounds());
+  if sulphur = [] then
+    Exit;
+
+  sulphur := sulphur.Difference(sulphur.FilterBox(MainScreen.GetPlayerBox()));
+  if sulphur = [] then
+    Exit;
+
+  atpa := sulphur.Cluster(3);
+
+  atpa.SortByArea();
+  sulphur := atpa[0];
+
+  Result := sulphur <> [];
+end;
+
+function MineSulphur(sulphur: TPointArray): Boolean;
+begin
+  Mouse.Move(sulphur, True, True);
+  if not MainScreen.IsUpText('Mine') then
+    Exit;
+
+  Mouse.Click(MOUSE_LEFT);
+  IsMining := MainScreen.DidRedClick();
+end;
+
+begin
+  while True do
+  begin
+    if Inventory.IsFull() then
+    begin
+      Inventory.ShiftDrop(['Volcanic sulphur'], Inventory.RandomPattern());
+      IsMining := False;
+      Continue;
+    end;
+
+    if IsMining then
+    begin
+      IsMining := XPBar.WaitXP(6000);
+      Continue;
+    end;
+
+    if FindSulphur(sulphur) then
+    begin
+      MineSulphur(sulphur);
+      Continue;
+    end;
+
+    if Inventory.ContainsItem('Volcanic sulphur') then
+    begin
+      Inventory.ShiftDrop(['Volcanic sulphur'], Inventory.RandomPattern());
+      Continue;
+    end;
+
+    Wait(2000);
+  end;
+end.
