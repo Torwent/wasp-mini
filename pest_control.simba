@@ -96,7 +96,7 @@ begin
 
   if not RSClient.IsLoggedIn() then
     Login.LoginPlayer();
-  if WLSettings.RemoteInput.ScriptDebug then
+  if WLSettings.RemoteInput.HUDDebug then
   begin
     //DebugNPCArray += TRSNPC(RSMonsters.AnyMonster);
   end;
@@ -137,10 +137,9 @@ begin
                        (Minimap.GetHPPercent <= 60);
 end;
 
-function TScript.Heal: Boolean;
+function TScript.Heal(): Boolean;
 var
   MinPercent: Int32 := Random(60, 90);
-  Slots: TIntegerArray;
 begin
   repeat
     if not Inventory.Consume(ERSConsumable.FOOD_CONSUMABLE) then

@@ -21,14 +21,14 @@ procedure TAntiban.Setup(); override;
 begin
   inherited;
 
-  Antiban.Skills := [ERSSkill.TOTAL];
-  Antiban.MinZoom := 15;
-  Antiban.MaxZoom := 40;
+  Self.Skills := [ERSSkill.TOTAL];
+  Self.MinZoom := 15;
+  Self.MaxZoom := 40;
 end;
 
 procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
 begin
-  Self.Name := 'Quest Helper';
+  'Quest Helper';
 
   inherited;
 
@@ -95,5 +95,5 @@ var
   Script: TScript;
 
 begin
-  Script.Run(MaxActions, MaxTime);
+  Script.Run(WLSettings.MaxActions, WLSettings.MaxTime);
 end.

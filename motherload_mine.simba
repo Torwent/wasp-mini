@@ -59,9 +59,9 @@ procedure TAntiban.Setup(); override;
 begin
   inherited;
 
-  Antiban.Skills := [ERSSkill.TOTAL];
-  Antiban.MinZoom := 40;
-  Antiban.MaxZoom := 40;
+  Self.Skills := [ERSSkill.TOTAL];
+  Self.MinZoom := 40;
+  Self.MaxZoom := 40;
 end;
 
 procedure TScript.SetupRockfall(Tile: TPoint);
@@ -197,7 +197,7 @@ procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
 var
   i: Int32;
 begin
-  Self.Name := 'Motherload Miner';
+  'Motherload Miner';
 
   inherited;
 
@@ -229,7 +229,7 @@ begin
   if not Inventory.FindItems(PickaxesArray) then
     UseDepositAll := True;
 
-  if ScriptDebugEnabled then
+  if WLSettings.RemoteInput.HUDDebug then
   begin
     if CurrentMLMLevel <> NO_REQS then
       DebugObjectArray += Entrance;
@@ -282,7 +282,7 @@ function TScript.InQuarry: Boolean;
 var
   TPA: TPointArray;
 begin
-  TPA := Self.RSW.GetMMPoly(OreArray[OreIndex].TileArray);
+  TPA := Self.RSW.GetMMPoly(OreArray[OreIndex].Coordinates);
   TPA := TPA.ConvexHull.Connect;
 
   if CurrentMLMLevel = NO_REQS then
@@ -312,7 +312,7 @@ begin
 
     DIARY:
       begin
-        if MyPos.Y < RockFall.TileArray[0].Y then
+        if MyPos.Y < RockFall.Coordinates[0].Y then
           Result := 0
         else
           Result := 1;
@@ -320,7 +320,7 @@ begin
 
     UPPER_LEVEL:
       begin
-        if MyPos.X >= (RockFall.TileArray[0].X - 2) then
+        if MyPos.X >= (RockFall.Coordinates[0].X - 2) then
           Result := 0
         else
           Result := 1;
@@ -398,7 +398,7 @@ begin
   else
     Index += 1;
 
-  Result := Self.RSW.WebWalk(OreArray[Index].TileArray, 2, 0.2);
+  Result := Self.RSW.WebWalk(OreArray[Index].Coordinates, 2, 0.2);
 end;
 
 function TScript.MovePreviousCluster: Boolean;
@@ -408,7 +408,7 @@ begin
 
   Self.HandleRockfall;
 
-  Result := Self.RSW.WebWalk(OreArray[OreIndex - 1].TileArray, 2, 0.2);
+  Result := Self.RSW.WebWalk(OreArray[OreIndex - 1].Coordinates, 2, 0.2);
 end;
 
 function TScript.LeaveQuarry: Boolean;
@@ -442,7 +442,7 @@ end;
 
 function TScript.IsMining: Boolean;
 begin
-  Result := SRL.IsAnimating(MainScreen.GetPlayerBox, MainScreen.ConvertDistance(450), 350, 5);
+  Result := SRL.IsAnimating(MainScreen.GetPlayerBox, MainScreen.NormalizeDistance(450), 350, 5);
 end;
 
 function TScript.WaitMining(t: UInt32 = 3000): Boolean;
@@ -593,7 +593,7 @@ begin
     Self.State := Self.GetState();
     Self.SetAction(ToStr(Self.State));
     OreIndex := Self.GetCluster;
-    Self.ExtraInfo := 'CurrentCluster: ' + ToStr(OreIndex) +
+    Self.'CurrentCluster: ' + ToStr(OreIndex) +
                  STR_NEW_LINE +
                  'SackCount: ' + ToStr(Self.GetSackCount) +
                  STR_NEW_LINE +
@@ -755,7 +755,7 @@ begin
 
   with Selector do
   begin
-    Init(Self.SSPanel.Panel); 
+    Create(Self.SSPanel.Panel); 
     SetCaption('Task:');
     SetLeft(5);  
     SetTop(5);
@@ -783,5 +783,5 @@ begin
   {$IFDEF SCRIPT_GUI}
   Sync(@Config.Run);
   {$ENDIF}
-  Script.Run(MaxActions, MaxTime);
+  Script.Run(WLSettings.MaxActions, WLSettings.MaxTime);
 end.

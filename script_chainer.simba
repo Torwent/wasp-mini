@@ -1,5 +1,5 @@
 {$DEFINE SCRIPT_CHAIN}
-{$I SRL/osr.simba}
+{$I SRL-T/osr.simba}
 {$I WaspLib/osr.simba}
 
 begin
@@ -7,8 +7,8 @@ begin
 end;
 
 {$SCOPEDENUMS ON}
-  {$I ../Scripts/PremiumWaspBots/anvil_smither.simba}
-  {$I ../Scripts/FreeWaspBots/alcher.simba}
+  {$I ../Scripts/wasp-premium/wasp_anvil_smither.simba}
+  {$I ../Scripts/wasp-free/wasp_alcher.simba}
 {$SCOPEDENUMS OFF}
 
 begin
@@ -16,7 +16,7 @@ begin
 
   while True do
   begin
-    Smither.Run(MaxActions, MaxTime);  //Main function of the first script
-    Alcher.Run(MaxActions, MaxTime);   //Main function of the second script
+    Smither.Run(WLSettings.MaxActions, WLSettings.MaxTime);  //Main function of the first script
+    Alcher.Run(WLSettings.MaxActions, WLSettings.MaxTime);   //Main function of the second script
   end;
 end.
