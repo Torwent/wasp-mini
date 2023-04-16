@@ -1,3 +1,12 @@
+## [0.9.1](https://github.com/Torwent/wasp-mini/compare/v0.9.0...v0.9.1) (2023-04-16)
+
+
+### Bug Fixes
+
+* **pest_control:** compiles again ([4c5cb0d](https://github.com/Torwent/wasp-mini/commit/4c5cb0d5702b4418b229d5eadef1bbdb40754b52))
+
+
+
 # [0.9.0](https://github.com/Torwent/wasp-mini/compare/v0.8.2...v0.9.0) (2023-04-16)
 
 
@@ -31,15 +40,6 @@
 ### Features
 
 * added a script for arceuus favour ([1bef07a](https://github.com/Torwent/wasp-mini/commit/1bef07acf5b29d6960278bd0c009088570e59afe))
-
-
-
-# [0.7.0](https://github.com/Torwent/wasp-mini/compare/v0.6.0...v0.7.0) (2022-05-08)
-
-
-### Features
-
-* script chainer moved to miniscripts ([88e1785](https://github.com/Torwent/wasp-mini/commit/88e17859792218d46d4a79283155abb687975b02))
 
 
 
