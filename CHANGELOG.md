@@ -1,3 +1,12 @@
+## [0.8.2](https://github.com/Torwent/wasp-mini/compare/v0.8.1...v0.8.2) (2023-04-16)
+
+
+### Bug Fixes
+
+* **arceuus favour:** should now work with simba1400 ([afbb08a](https://github.com/Torwent/wasp-mini/commit/afbb08ae1a28e0f216e883ea42df9e84bd18d70b))
+
+
+
 ## [0.8.1](https://github.com/Torwent/wasp-mini/compare/v0.8.0...v0.8.1) (2022-12-12)
 
 
@@ -31,15 +40,6 @@
 ### Features
 
 * new herbcleaner script ([4ee3391](https://github.com/Torwent/wasp-mini/commit/4ee339186db623794eef2837c6a44fa1b277ca1b))
-
-
-
-# [0.5.0](https://github.com/Torwent/wasp-mini/compare/v0.4.0...v0.5.0) (2022-05-08)
-
-
-### Features
-
-* new teleporter script ([a4da792](https://github.com/Torwent/wasp-mini/commit/a4da792cd561cd58d075b95bd2c9bdd13d492532))
 
 
 
