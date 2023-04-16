@@ -1,6 +1,4 @@
-{$DEFINE SRL_USE_REMOTEINPUT}
-{$IFDEF WINDOWS}{$DEFINE SCRIPT_GUI}{$ENDIF}
-{$I SRL/osr.simba}
+{$I SRL-T/osr.simba}
 {$I WaspLib/osr.simba}
 
 begin
@@ -13,7 +11,7 @@ type
              MAGIC_LOGS, REDWOOD_LOGS);
 
 var
-  CurrentLogs: ERSLogs := ERSLogs.MAPLE_LOGS;
+  CurrentLogs: ERSLogs := ERSLogs.OAK_LOGS;
 
 type
   EBurnerState = (
@@ -50,9 +48,9 @@ procedure TAntiban.Setup(); override;
 begin
   inherited;
 
-  Antiban.Skills := [ERSSkill.FIREMAKING, ERSSkill.TOTAL];
-  Antiban.MinZoom := 15;
-  Antiban.MaxZoom := 40;
+  Self.Skills := [ERSSkill.FIREMAKING, ERSSkill.TOTAL];
+  Self.MinZoom := 15;
+  Self.MaxZoom := 40;
 end;
 
 procedure TLogBurner.SetupLogs;
@@ -75,18 +73,18 @@ end;
 
 procedure TLogBurner.Init(MaxActions: Int32; MaxTime: Int64); override;
 begin
-  Self.Name := 'AIO Firemaker';
+  'AIO Firemaker';
 
   inherited;
 
   Self.RSW.Setup('x7789y2306');
-  Self..ScriptBank := RSObjects.VarrockWestBank;
+  Self.ScriptBank := RSObjects.GEBank;
 
   Self.SetupLogs;
   Tool := ['Tinderbox', 1, False];
   Material := [Logs, BANK_WITHDRAW_ALL, False];
 
-  StartingPoints := [[8241, 2732], [8241, 2736]];
+  StartingPoints := [[8086, 2548], [8086, 2540]];
   NextStartingPoint := StartingPoints[0];
 
   Fire := RSObjects.BurningFire;
@@ -98,9 +96,9 @@ begin
   if not Inventory.FindItem(Tool.Item, ToolSlot) then
     ToolSlot := -1;
 
-  if ScriptDebugEnabled then
+  if WLSettings.RemoteInput.HUDDebug then
   begin
-    DebugObjectArray += Self.ScriptBank;
+    DebugObjectArray += @Self.ScriptBank;
     DebugObjectArray += @Fire;
   end;
 end;
@@ -124,7 +122,7 @@ begin
   else
     NextStartingPoint := StartingPoints[0];
 
-  Fire.TileArray := PopulateTile(NextStartingPoint, [0, 0, 5, 5]);
+  Fire.Coordinates := PopulateTile(NextStartingPoint, 2);
 end;
 
 function TLogBurner.SmallStep: Boolean;
@@ -134,7 +132,7 @@ var
 begin
   for Tile in Tiles do
   begin
-    Fire.TileArray := [Tile];
+    Fire.Coordinates := [Tile];
     if Fire.Find then
     begin
       Self.RSW.WebWalk(Tile, 1, 0.2);
@@ -145,16 +143,16 @@ end;
 
 function TLogBurner.WalkNextPoint: Boolean;
 begin
-  if Result := Self.RSW.WebWalk(NextStartingPoint) then
+  if Result := Self.RSW.WebWalk(NextStartingPoint, 12, 0.2) then
      Self.ChangeStartingPoint;
 end;
 
 function TLogBurner.Teleport: Boolean;
 begin
-  if Magic.Open() and not Magic.CanActivate(ERSSPell.VARROCK_TELEPORT) then
-    Self.WalkNextPoint
-  else if Magic.CastSpell(ERSSpell.VARROCK_TELEPORT) then
-    Wait(1200);
+  //if Magic.Open() and not Magic.CanActivate(ERSSPell.VARROCK_TELEPORT) then
+    Self.WalkNextPoint;
+  //else if Magic.CastSpell(ERSSpell.VARROCK_TELEPORT) then
+  //  Wait(1200);
 
   Result := WaitUntil(Self.RSW.AtTile(NextStartingPoint, 40), 100, 9000);
 
@@ -184,7 +182,7 @@ begin
   WL.PreviousXP := XPBar.Read;
   if Inventory.Use(ToolSlot, Material.Item) then
   begin
-    Wait(100);
+    Wait(800);
     if InvCount > Inventory.CountItem(Material.Item) then
     begin
       if Inventory.FindItem(Material.Item) then
@@ -202,6 +200,7 @@ begin
             Break;
         end;
       until BurnTimer.IsFinished() or XPBar.EarnedXP();
+      Wait(600, 800);
     end;
   end;
 end;
@@ -238,10 +237,10 @@ begin
   if (Inventory.IsSlotUsed(ToolSlot) or Inventory.FindItem(Tool.Item, ToolSlot)) and Inventory.FindItem(Material.Item) then
   begin
     MyPos := Self.RSW.GetMyPos();
-    if MyPos.WithinDistance(Self.ScriptBank.TileArray, 10) then
+    if MyPos.WithinDistance(Self.ScriptBank.Coordinates, 12) then
       Exit(EBurnerState.TELEPORT);
 
-    if Inventory.IsFull() and not MyPos.WithinDistance(NextStartingPoint, 4) then
+    if Inventory.IsFull() and not MyPos.WithinDistance(NextStartingPoint, 12) then
     begin
       if Fire.Find then
         Exit(EBurnerState.CHANGE_START);
@@ -252,25 +251,23 @@ begin
     Exit(EBurnerState.BURN_LOG);
   end;
 
-  Exit(EBurnerState.Open()_BANK);
+  Exit(EBurnerState.Open_BANK);
 end;
 
 procedure TLogBurner.Run(MaxActions: Int32; MaxTime: Int64);
 begin
-  ClearDebug();
   Self.Init(MaxActions, MaxTime);
 
   repeat
     Self.State := Self.GetState();
-    Self.SetAction(ToStr(Self.State));
-    
+    Self.Action := ToStr(Self.State);
 
     case Self.State of
       EBurnerState.WAIT_STATE: Wait(800, 850);
       EBurnerState.BURN_LOG: Self.BurnLogs;
       EBurnerState.CHANGE_START: Self.ChangeStartingPoint;
       EBurnerState.SMALL_STEP: Self.SmallStep;
-      EBurnerState.Open()_BANK: Bank.WalkOpen(Self.ScriptBank);
+      EBurnerState.Open_BANK: Bank.WalkOpen();
       EBurnerState.WITHDRAW_LOG: Self.Withdraw(Material);
       EBurnerState.WITHDRAW_TOOL: Self.Withdraw(Tool);
       EBurnerState.CLOSE_INTERFACE: MainScreen.CloseInterface();
@@ -293,61 +290,7 @@ begin
   Result := (Slot > -1) and Self.Open() and Self.IsSlotUsed(Self.GetSlotBox(Slot));
 end;
 
-type
-  TBurnerConfig = record(TScriptForm)
-    LogSelector: TLabeledCombobox;
-  end;
-
-procedure TBurnerConfig.StartScript(Sender: TObject);
 begin
-  Self.Init(Sender);
 
-  CurrentLogs := ERSLogs(LogSelector.Combobox.getItemIndex());
-end;
-
-procedure TBurnerConfig.Setup(); override;
-begin
-  inherited;
-
-  with LogSelector do
-  begin
-    Init(Self.SSPanel.Panel); 
-    SetCaption('Logs:');
-    SetLeft(5);  
-    SetTop(35);
-    SetWidth(200);
-    Combobox.setStyle(csDropDownList);
-    AddItem('Regular');
-    AddItem('Achey tree');
-    AddItem('Oak');
-    AddItem('Willow');
-    AddItem('Teak');
-    AddItem('Arctic pine');
-    AddItem('Maple');
-    AddItem('Mahogany');
-    AddItem('Yew');
-    AddItem('Blisterwood');
-    AddItem('Magic');
-    AddItem('Redwood');
-    Combobox.setItemIndex(Ord(CurrentLogs));
-  end;
-
-  Self.WLPanel.StartButton.setOnClick(@Self.StartScript);
-end;
-
-procedure TBurnerConfig.Run(); override;
-begin
-  Self.Setup();
-
-  inherited;
-end;
-
-var
-  BurnerConfig: TBurnerConfig;
-
-begin
-  {$IFDEF SCRIPT_GUI}
-  Sync(@BurnerConfig.Run);
-  {$ENDIF}
-  LogBurner.Run(MaxActions, MaxTime);
+  LogBurner.Run(WLSettings.MaxActions, WLSettings.MaxTime);
 end.
