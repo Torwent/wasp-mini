@@ -1,0 +1,70 @@
+{.$DEFINE SRL_DISABLE_REMOTEINPUT}
+{$I SRL-T/osr.simba}
+{$I WaspLib/osr.simba}
+
+const PLANK: TRSItem = 'Plank';
+
+var
+  upText, title: String;
+  key: Int32;
+
+begin
+  case PLANK of
+    'Plank':          key := VK_1;
+    'Oak plank':      key := VK_1;
+    'Teak plank':     key := VK_1;
+    'Mahogany plank': key := VK_1;
+  end;
+
+  while True do
+  begin
+    if Chat.HasContinue() then
+      Chat.ClickContinue(True);
+
+    title := Chat.GetChatTitle();
+
+    if 'Take' in title then
+      Chat.ClickOption('Yes', True);
+
+    if 'Select' in title then
+    begin
+      Keyboard.PressKey(key);
+      WaitUntil(not ('Select' in Chat.GetChatTitle()), 200, 3000);
+      Continue;
+    end;
+
+    upText := MainScreen.GetUpText();
+
+    if 'Build' in upText then
+    begin
+      Mouse.Click(MOUSE_LEFT);
+      if MainScreen.DidRedClick() then
+        WaitUntil(MainScreen.IsClassicOpen(), 200, 3000);
+    end;
+
+    if MainScreen.IsClassicOpen() then
+    begin
+      if Bank.IsOpen() then
+      begin
+        RSClient.RemoteInput.DisableRealInput();
+        if Inventory.CountItem('Steel bar') < 2 then
+        begin
+          Bank.MouseItem('Steel bar');
+          Mouse.Click(MOUSE_LEFT);
+        end;
+
+        if not Inventory.IsFull() then
+        begin
+          Bank.MouseItem(PLANK);
+          Mouse.Click(MOUSE_LEFT);
+        end;
+        Bank.Close(True);
+        RSClient.RemoteInput.EnableRealInput();
+        Continue;
+      end;
+
+      Keyboard.PressKey(key);
+      WaitUntil(not MainScreen.IsClassicOpen(), 200, 3000);
+    end;
+  end;
+end.
