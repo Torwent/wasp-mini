@@ -2,29 +2,129 @@
 {$I SRL-T/osr.simba}
 {$I WaspLib/osr.simba}
 
-const PLANK: TRSItem = 'Plank';
+const PLANK: TRSItem = 'Oak plank';
+
+type
+  EMHCities = (
+    MH_UNKNOWN,
+    MH_ARDOUGNE,
+    MH_FALADOR,
+    MH_HOSIDIUS,
+    MH_VARROCK
+  );
+
+  EMHHouse = (
+    JESS, NOELLA, ROSS,
+    LARRY, NORMAN, TAU,
+    BARBARA, LEELA, MARIAH,
+    BOB, JEFF, SARAH,
+    HOUSE_UNKOWN
+  );
 
 var
-  upText, title: String;
-  key: Int32;
+  upText, title, chatText, tmp: String;
+  key, x, y, i: Int32;
+  CurrentHouse, PreviousHouse: EMHHouse;
+  CurrentCity, PreviousCity: EMHCities;
+
+function TRSChat.GetChat: String; override;
+var
+  Option: TRSChatboxOption;
+begin
+  for Option in Self.GetOptions([CHAT_COLOR_BLACK, CHAT_COLOR_WHITE, CHAT_COLOR_LIGHT_RED]) do
+  begin
+    if Result <> '' then
+      Result += LineEnding;
+
+    Result += Option.Text;
+  end;
+end;
+
+function ShouldTeleport(): Boolean;
+begin
+  if CurrentHouse = HOUSE_UNKOWN then
+    Exit;
+  if CurrentCity = MH_UNKNOWN then
+    Exit;
+  if CurrentHouse = PreviousHouse then
+    Exit;
+
+  case CurrentHouse of
+    NOELLA, BARBARA, JEFF: Exit(True);
+  end;
+
+  Result := CurrentCity <> PreviousCity;
+end;
+
 
 begin
   case PLANK of
     'Plank':          key := VK_1;
-    'Oak plank':      key := VK_1;
-    'Teak plank':     key := VK_1;
-    'Mahogany plank': key := VK_1;
+    'Oak plank':      key := VK_2;
+    'Teak plank':     key := VK_3;
+    'Mahogany plank': key := VK_4;
   end;
 
   while True do
   begin
+    RSClient.Image().Clear();
+
+    if ShouldTeleport() then
+    begin
+    case CurrentCity of
+      MH_ARDOUGNE:
+        if not Inventory.ClickItem('Ardougne teleport') then
+          Continue;
+
+      MH_FALADOR:
+        if not Inventory.ClickItem('Falador teleport') then
+          Continue;
+
+      MH_HOSIDIUS:
+        if not Inventory.ClickItem('Teleport to house', 'Outside') then
+          Continue;
+
+      MH_VARROCK:
+        if not Inventory.ClickItem('Varrock teleport', 'Varrock V') then
+          Continue;
+    end;
+      PreviousHouse := CurrentHouse;
+      PreviousCity := CurrentCity;
+      CurrentCity := MH_UNKNOWN;
+    end;
+
     if Chat.HasContinue() then
+    begin
+      chatText := Chat.GetChat().ToLower();
+      if 'please could' in chatText then
+      begin
+        chatText := chatText.After('go see ');
+        tmp := chatText.Before(' ').Before(',');
+
+        for i := 0 to High(Ord(EMHHouse)) do
+        begin
+          CurrentHouse := EMHHouse(i);
+          if ToString(CurrentHouse).Lower() = tmp then
+            Break;
+        end;
+
+        CurrentCity := EMHCities(Floor(Ord(CurrentHouse)/3) + 1);
+      end;
+
       Chat.ClickContinue(True);
+      Continue;
+    end;
 
     title := Chat.GetChatTitle();
 
     if 'Take' in title then
+    begin
       Chat.ClickOption('Yes', True);
+      WaitUntil(Chat.ClickContinue(True), 300, 5000);
+      Magic.MouseSpell(ERSSpell.NPC_CONTACT, MOUSE_RIGHT);
+      ChooseOption.Select('Amy');
+      Continue;
+    end;
 
     if 'Select' in title then
     begin
@@ -35,8 +135,11 @@ begin
 
     upText := MainScreen.GetUpText();
 
+    EIOS_GetRealMousePosition(RSClient.RemoteInput.EIOS, x, y);
+
     if 'Build' in upText then
     begin
+      Mouse.Teleport(x, y);
       Mouse.Click(MOUSE_LEFT);
       if MainScreen.DidRedClick() then
         WaitUntil(MainScreen.IsClassicOpen(), 200, 3000);
