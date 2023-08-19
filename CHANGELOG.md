@@ -1,3 +1,12 @@
+## [0.9.2](https://github.com/Torwent/wasp-mini/compare/v0.9.1...v0.9.2) (2023-08-19)
+
+
+### Bug Fixes
+
+* **combiner:** add combiner ([f8cf683](https://github.com/Torwent/wasp-mini/commit/f8cf683cd59c422964fdc96fa68c091b7f2259b2))
+
+
+
 ## [0.9.1](https://github.com/Torwent/wasp-mini/compare/v0.9.0...v0.9.1) (2023-04-16)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **pest control:** combat timings ([6fc1da1](https://github.com/Torwent/wasp-mini/commit/6fc1da10f961d7b09c0c669d1e7dea17fbaa22f9))
-
-
-
-# [0.8.0](https://github.com/Torwent/wasp-mini/compare/v0.7.0...v0.8.0) (2022-08-16)
-
-
-### Features
-
-* added a script for arceuus favour ([1bef07a](https://github.com/Torwent/wasp-mini/commit/1bef07acf5b29d6960278bd0c009088570e59afe))
 
 
 
