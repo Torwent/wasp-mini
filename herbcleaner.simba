@@ -23,7 +23,7 @@ begin
         Bank.DepositAll;
 
     if Bank.IsOpen() then
-      Bank.WithdrawItem([DirtyHerb, BANK_WITHDRAW_ALL, False], True);
+      Bank.WithdrawItem([DirtyHerb, Bank.QUANTITY_ALL, False], True);
 
     Bank.Open(ERSBankLocation.CASTLE_WARS);
   until not RSClient.IsLoggedIn();

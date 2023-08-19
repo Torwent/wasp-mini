@@ -1,0 +1,453 @@
+{$DEFINE SCRIPT_ID := '997212ef-86fc-44cf-ae6f-3a74422e6b57'}
+{$DEFINE SCRIPT_REVISION := '23'}
+{$IFNDEF SCRIPT_CHAIN}
+  {$DEFINE SCRIPT_GUI}
+  {$I SRL-T/osr.simba}
+  {$I WaspLib/osr.simba}
+
+begin
+  Login.PlayerIndex := 0;
+end;
+{$ENDIF}
+
+var
+  Ingredients: array of TRSBankDepositItem = [
+    ['Bird nest', -1],
+    ['Pestle and mortar', 1]
+  ];
+
+  FinalProduct: array of TRSBankDepositItem = [
+    ['Crushed nest', 27]
+  ];
+
+  MakeString: String = 'Amethyst dart tips';
+
+type
+  ECombinerState = (
+    OPEN_BANK,
+    WITHDRAW_MATERIALS,
+    DEPOSIT_PRODUCTS,
+
+    OPEN_COLLECT,
+    HANDLE_COLLECT,
+    CLOSE_INTERFACE,
+
+    DO_TASK,
+    HANDLE_MAKE,
+    WAIT_TASK,
+
+    LEVEL_UP,
+    CLOSE_CONTEXT,
+
+    END_SCRIPT
+  );
+
+  TCombiner = record(TBaseBankScript)
+    State: ECombinerState;
+
+    Materials: array of TRSBankWithdrawItem;
+    Products: array of TRSBankDepositItem;
+    DoingTask: Boolean;
+
+    PossibleMakeStrings: TStringArray;
+    MakeStr: String;
+
+    HasMake: Boolean;
+    MakeSet: Boolean;
+  end;
+
+procedure TAntiban.Setup(); override;
+begin
+  Self.Skills := [ERSSkill.Total];
+  Self.MinZoom := 15;
+  Self.MaxZoom := 85;
+
+  inherited;
+end;
+
+procedure TCombiner.Init(maxActions: Int32; maxTime: Int64); override;
+var
+  Item: TRSBankDepositItem;
+begin
+  inherited;
+
+  Self.RSW.SetupNamedRegion();
+
+  if MakeString <> '' then
+    PossibleMakeStrings += MakeString;
+
+  for Item in FinalProduct do
+  begin
+    Products += Item;
+    ActionProfit += ItemData.GetAverage(Item.Item);
+    PossibleMakeStrings += ToStr(Item.Item).Replace('(u)', '').Strip();
+  end;
+
+  for Item in INGREDIENTS do
+  begin
+    Materials += [Item.Item, Item.Quantity, False];
+    ActionProfit -= ItemData.GetAverage(Item.Item);
+    PossibleMakeStrings += ToStr(Item.Item).Replace('(u)', '').Strip();
+  end;
+end;
+
+
+function TCombiner.ContainsAllMaterials(): Boolean;
+var
+  material: TRSBankWithdrawItem;
+begin
+  if Inventory.Count() = 0 then
+    Exit;
+
+  for material in Materials do
+    if not Inventory.ContainsItem(material.Item) then
+      Exit;
+
+  Result := True;
+end;
+
+function TCombiner.ContainsAnyMaterials(): Boolean;
+var
+  material: TRSBankWithdrawItem;
+begin
+  if Inventory.Count() = 0 then
+    Exit;
+
+  for material in Materials do
+    if Inventory.ContainsItem(material.Item) then
+      Exit(True);
+end;
+
+function TCombiner.ContainsProducts(): Boolean;
+var
+  Product: TRSBankDepositItem;
+  Slots: TIntegerArray;
+begin
+  if Inventory.Count() = 0 then
+    Exit(False);
+
+  for Product in Products do
+    if Inventory.FindItem(Product.Item, Slots) then
+      Exit(True);
+
+  Result := False;
+end;
+
+function TCombiner.ContainsRandomItem(): Boolean;
+var
+  material: TRSBankWithdrawItem;
+  product: TRSBankDepositItem;
+  items: TRSItemArray;
+begin
+  for material in Materials do
+    items += material.Item;
+
+  for product in Products do
+    items += product.Item;
+
+  Result := Inventory.ContainsRandomItems(items);
+end;
+
+
+
+function TCombiner.CountItem(Item: TRSBankDepositItem): Int32;
+begin
+  if (Result := Inventory.CountItemStack(Item.Item)) = 0 then
+    Result := Inventory.CountItem(Item.Item);
+end;
+
+function TCombiner.CountProducts(): Int32;
+var
+  Product: TRSBankDepositItem;
+begin
+  for Product in Products do
+    Result += Self.CountItem(Product);
+end;
+
+
+function TCombiner.Withdraw(): Boolean; overload;
+var
+  material: TRSBankWithdrawItem;
+begin
+  for material in Materials do
+    if not Self.Withdraw(material) then
+      Exit;
+
+  Result := True;
+end;
+
+function TCombiner.Deposit(): Boolean;
+var
+  Product: TRSBankDepositItem;
+  InvCount: Int32;
+begin
+  if Products <> [] then
+    InvCount := Inventory.CountItem(Products[0].Item);
+
+  if not Self.ContainsAnyMaterials() or Self.ContainsRandomItem() then
+  begin
+    if Bank.DepositAll() then
+      Result := WaitUntil(Inventory.Count() = 0, 300, 3000);
+    if Result then
+      TotalActions += InvCount;
+    Exit;
+  end;
+
+  for Product in Products do
+  begin
+    if Bank.DepositItem(Product, True) then
+      if WaitUntil(not Inventory.ContainsItem(Product.Item), 50, 2000) then
+        Self.TotalActions += InvCount;
+  end;
+
+  Result := not Self.ContainsProducts();
+end;
+
+function TCombiner.HandleCollectBox(): Boolean; overload;
+var
+  material: TRSBankWithdrawItem;
+  itemArray: TRSItemArray;
+begin
+  for material in Materials do
+    itemArray += material.Item;
+
+  Result := Self.HandleCollectBox(itemArray);
+end;
+
+
+function TCombiner.DoTask(): Boolean;
+begin
+  DoingTask := Result := Inventory.Use(Self.Materials[0].Item, Self.Materials[1].Item);
+  if Result then
+  begin
+    if not MakeSet then
+    begin
+      HasMake := Make.IsOpen(3000);
+      MakeSet := True;
+    end
+    else if HasMake then
+      Make.IsOpen(3000);
+  end;
+end;
+
+function TCombiner.HandleMake(): Boolean;
+begin
+  if Self.MakeStr = '' then
+  begin
+    for Self.MakeStr in PossibleMakeStrings do
+    begin
+      Self.DoingTask := Result := Make.Select(Self.MakeStr, Make.QUANTITY_ALL, SRL.Dice(98.5));
+      if Result then
+        Exit(WaitUntil(not Make.IsOpen(), 100, 2000));
+    end;
+
+    Exit;
+  end;
+
+  Self.DoingTask := Result := Make.Select(Self.MakeStr, Make.QUANTITY_ALL, SRL.Dice(98.5));
+  if Result then
+    Exit(WaitUntil(not Make.IsOpen(), 100, 2000));
+end;
+
+function TCombiner.IsMakingProducts(WaitTime: Int32 = 600): Boolean;
+var
+  InitialCount: Int32 := Self.CountProducts;
+begin
+  if Result := WaitUntil(Self.CountProducts > InitialCount, SRL.TruncatedGauss(50, 200), WaitTime) then
+    WL.Activity.Restart();
+end;
+
+function TCombiner.WaitTask(): Boolean;
+begin
+  if DoingTask then
+    Result := DoingTask := Self.ContainsAllMaterials() and Self.IsMakingProducts(3000)
+  else
+    Result := DoingTask := Self.IsMakingProducts(3000);
+end;
+
+
+function TCombiner.GetState(): ECombinerState;
+begin
+  if WL.Activity.IsFinished() then
+    Exit(ECombinerState.END_SCRIPT)
+
+  else if ChooseOption.IsOpen() then
+    Exit(ECombinerState.CLOSE_CONTEXT)
+
+  else if XPBar.EarnedXP() then
+    Exit(ECombinerState.WAIT_TASK)
+
+  else if Chat.LeveledUp() then
+  begin
+    DoingTask := False;
+    Exit(ECombinerState.LEVEL_UP);
+  end
+
+  else if Make.IsOpen() then
+    Exit(ECombinerState.HANDLE_MAKE)
+
+  else if MainScreen.HasInterface() then
+  begin
+    if Bank.IsOpen() then
+    begin
+      if Self.ContainsProducts() then
+        Exit(ECombinerState.DEPOSIT_PRODUCTS)
+      else if BankEmpty or Self.ContainsAllMaterials() then
+        Exit(ECombinerState.CLOSE_INTERFACE)
+      else if not Self.ContainsAllMaterials() then
+        Exit(ECombinerState.WITHDRAW_MATERIALS);
+    end
+
+    else if CollectBox.IsOpen() then
+    begin
+      if CollectEmpty then
+        Exit(ECombinerState.CLOSE_INTERFACE);
+      Exit(ECombinerState.HANDLE_COLLECT);
+    end;
+
+    Exit(ECombinerState.CLOSE_INTERFACE);
+  end
+
+  else if Self.ContainsAllMaterials() then
+  begin
+    if DoingTask then
+      Exit(ECombinerState.WAIT_TASK);
+
+    Exit(ECombinerState.DO_TASK);
+  end;
+
+  if BankEmpty and CollectEmpty then
+    Exit(ECombinerState.END_SCRIPT)
+  else if BankEmpty then
+    Exit(ECombinerState.OPEN_COLLECT);
+  Exit(ECombinerState.OPEN_BANK);
+end;
+
+function TCombiner.Terminate(): Boolean; override;
+begin
+  if inherited then
+    for 0 to 5 do
+      if Result := Bank.WithdrawItem(BankTab, [Products[0].Item, Bank.QUANTITY_ALL, True], True) then
+        Break;
+end;
+
+procedure TCombiner.Run(maxActions: Int32; maxTime: Int64);
+begin
+  Self.Init(maxActions, maxTime);
+
+  repeat
+    State := Self.GetState();
+    Self.SetAction(ToStr(State));
+
+    case Self.State of
+      ECombinerState.OPEN_BANK: Bank.WalkOpen();
+      ECombinerState.WITHDRAW_MATERIALS: Self.Withdraw();
+      ECombinerState.DEPOSIT_PRODUCTS: Self.Deposit();
+
+      ECombinerState.OPEN_COLLECT: CollectBox.WalkOpen();
+      ECombinerState.HANDLE_COLLECT: Self.HandleCollectBox();
+      ECombinerState.CLOSE_INTERFACE: MainScreen.CloseInterface();
+
+      ECombinerState.DO_TASK: Self.DoTask();
+      ECombinerState.HANDLE_MAKE: Self.HandleMake();
+      ECombinerState.WAIT_TASK: Self.WaitTask();
+
+      ECombinerState.LEVEL_UP: Chat.HandleLevelUp();
+      ECombinerState.CLOSE_CONTEXT: ChooseOption.Close();
+
+      ECombinerState.END_SCRIPT: Break;
+    end;
+
+    Self.DoAntiban();
+  until Self.ShouldStop();
+
+  if not Self.Terminate() then
+    TerminateScript(Self.Name + ' didn''t terminate properly. Stopping execution.');
+end;
+
+var
+  Combiner: TCombiner;
+
+{$IFNDEF SCRIPT_CHAIN}
+{$IFDEF SCRIPT_GUI}
+type
+  TCombinerConfig = record(TScriptForm)
+    //AddIngredient: TButton;
+    //IngredientSelectors: array of TLabeledEdit;
+    Info: TLabel;
+    FinalProductselector: TLabeledEdit;
+  end;
+
+procedure TCombinerConfig.StartScript(sender: TObject); override;
+begin
+  //Ingredient := PotionSelector.Edit.getText();
+
+  inherited
+end;
+
+procedure TCombinerConfig.Run(); override;
+var
+  tab: TTabSheet;
+begin
+  Self.Setup('Wasp Combiner');
+  Self.Start.setOnClick(@Self.StartScript);
+
+  Self.AddTab('Script Settings');
+  tab := Self.Tabs[High(Self.Tabs)];
+
+  Self.CreateAccountManager(tab);
+
+
+  with Self.Info do
+  begin
+    Create(tab);
+    SetCaption('Configuration at the top of the script!' + LineEnding +
+               'Keep in mind this can do a lot of things but not everything!');
+    SetTop(TControl.AdjustToDPI(200));
+    SetLeft(TControl.AdjustToDPI(50));
+  end;
+  (*
+  with Self.AddIngredient do
+  begin
+    Create(tab);
+    SetCaption('Add ingredient');
+    SetLeft(5);
+    SetTop(35);
+    SetWidth(50);
+
+    setOnClick(@Self.OnSaveClick);
+  end;
+
+  with PotionSelector do
+  begin
+    Create(tab);
+    SetCaption('Food name (must be the exact name):');
+    SetLeft(5);
+    SetTop(35);
+    SetWidth(200);
+    SetText(MixPotion);
+  end;
+  *)
+
+  Self.CreateVersionPanel(tab);
+  Self.CreateAntibanManager();
+  Self.CreateBankSettings();
+  Self.CreateWaspLibSettings();
+  Self.CreateAPISettings();
+
+  inherited;
+end;
+
+var
+  CombinerConfig: TCombinerConfig;
+{$ENDIF}
+{$ENDIF}
+
+{$IFNDEF SCRIPT_CHAIN}
+begin
+  {$IFDEF SCRIPT_GUI}
+  CombinerConfig.Run();
+  {$ENDIF}
+  Combiner.Run(WLSettings.MaxActions, WLSettings.MaxTime);
+end.
+{$ENDIF}

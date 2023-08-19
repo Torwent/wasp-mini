@@ -82,7 +82,7 @@ begin
 
   Self.SetupLogs;
   Tool := ['Tinderbox', 1, False];
-  Material := [Logs, BANK_WITHDRAW_ALL, False];
+  Material := [Logs, Bank.QUANTITY_ALL, False];
 
   StartingPoints := [[8086, 2548], [8086, 2540]];
   NextStartingPoint := StartingPoints[0];

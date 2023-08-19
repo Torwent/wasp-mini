@@ -255,7 +255,7 @@ end;
 
 function TScript.GetSackCount: Int32;
 begin
-  Result := OCR.RecognizeNumber(SackCountBox, TOCRShadowRule.Create(20), RS_FONT_QUILL);
+  Result := OCR.RecognizeNumber(SackCountBox, TOCRShadowFilter.Create(20), RS_FONT_QUILL);
 end;
 
 function TScript.IsSackFull: Boolean;
