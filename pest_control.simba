@@ -1,7 +1,8 @@
 {$DEFINE SRL_USE_REMOTEINPUT}
-{$IFDEF WINDOWS}{.$DEFINE SCRIPT_GUI}{$ENDIF}
+{$IFDEF WINDOWS}{$DEFINE SCRIPT_GUI}{$ENDIF}
 {$I SRL-t/osr.simba}
 {$I WaspLib/osr.simba}
+{$I WaspLib/osr/handlers/combathandler.simba}
 
 begin
   Login.PlayerIndex := 0;
@@ -24,7 +25,7 @@ type
     END_SCRIPT
   );
 
-  TScript = record(TBaseWalkerScript)
+  TPestControl = record(TBaseWalkerScript)
     State: EState;
 
     Center: TPoint;
@@ -36,7 +37,7 @@ type
   end;
 
 
-procedure TScript.SetupDifficulty;
+procedure TPestControl.SetupDifficulty();
 begin
   CombatLevel := Combat.GetCombatLevel;
 
@@ -76,22 +77,22 @@ begin
   inherited;
 end;
 
-procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
+procedure TPestControl.Init(maxActions: Int32; maxTime: Int64); override;
 begin
-  Self.Name := 'Pest Control';
-
   inherited;
 
   Self.RSW.Setup([RSRegions.PEST_CONTROL_ISLAND, RSRegions.PEST_CONTROL_OUTPOST]);
-  Center := [5760, 5688];
+  Self.Center := [5760, 5688];
 
   RSMonsters.AnyMonster.UpText := ['Attack'];
-  RSMonsters.AnyMonster.Setup(50, 5, [Center]);
+  RSMonsters.AnyMonster.Setup(50, 5, [Self.Center]);
   RSMonsters.AnyMonster.DotFilter.Setup([5752, 5625, 3], False);
   RSMonsters.AnyMonster.Filter.MinimapDot := True;
   RSMonsters.AnyMonster.Filter.UpText := True;
   CombatHandler.Setup(RSMonsters.AnyMonster, 1200);
 
+  if Login.Players = [] then
+    Login.AddPlayer('','');
   Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
 
   if not RSClient.IsLoggedIn() then
@@ -106,7 +107,7 @@ begin
 end;
 
 
-function TScript.InIsland(Pos: TPoint): Boolean;
+function TPestControl.InIsland(Pos: TPoint): Boolean;
 begin
   Result := Pos.Y > 5000;
 
@@ -116,13 +117,13 @@ begin
     CombatHandler.InCombatTimer.Timeout := GetTickCount;
 end;
 
-function TScript.InBoat(Pos: TPoint): Boolean;
+function TPestControl.InBoat(Pos: TPoint): Boolean;
 begin
   Result := SRL.PointInPoly(Pos, BoatPoly);
 end;
 
 
-function TScript.EnterBoat: Boolean;
+function TPestControl.EnterBoat(): Boolean;
 begin
   if PCPlank.WalkClick() then
   begin
@@ -131,13 +132,13 @@ begin
   end;
 end;
 
-function TScript.PlayerLowHP: Boolean;
+function TPestControl.PlayerLowHP(): Boolean;
 begin
   Result := (MainScreen.IsClassicOpen and (Minimap.GetHPPercent <= 60)) or
                        (Minimap.GetHPPercent <= 60);
 end;
 
-function TScript.Heal(): Boolean;
+function TPestControl.Heal(): Boolean;
 var
   MinPercent: Int32 := Random(60, 90);
 begin
@@ -148,67 +149,68 @@ begin
   until Result := (Minimap.GetHPPercent >= MinPercent);
 end;
 
-function TScript.WalkSpot: Boolean;
+function TPestControl.WalkSpot(): Boolean;
 var
   TPA: TPointArray := PopulateTile(Center, 2);
 begin
   Result := Self.RSW.WebWalk(TPA, 8, 0.2);
 end;
 
-function TScript.GetState(): EState;
+function TPestControl.GetState(): EState;
 var
-  Pos: TPoint := Self.RSW.GetMyPos();
+  me: TPoint := Self.RSW.GetMyPos();
 begin
   if WL.Activity.IsFinished() then
-    Exit(END_SCRIPT);
+    Exit(EState.END_SCRIPT);
 
-  if Self.InIsland(Pos) then
+  if Self.InIsland(me) then
   begin
-    if PlayerLowHP and Inventory.ContainsAny(FOOD_ARRAY) then
-      Exit(HEAL_PLAYER)
+    if Self.PlayerLowHP() and Inventory.ContainsConsumable(ERSConsumable.FOOD_CONSUMABLE) then
+      Exit(EState.HEAL_PLAYER);
 
-    if Pos.WithinDistance(Center, 35) then
+    if me.Y > 5653 then
     begin
-      if not Minimap.IsPrayerEnabled and (Minimap.GetPrayerLevel > 5) then
-        Exit(ENABLE_PRAYER);
+      if not Minimap.IsPrayerEnabled() and (Minimap.GetPrayerLevel() > 5) then
+        Exit(EState.ENABLE_PRAYER);
 
       if not MainScreen.WaitInCombat(1200) then
-        Exit(ATTACK);
+        Exit(EState.ATTACK);
 
-      Exit(IN_COMBAT);
+      Exit(EState.IN_COMBAT);
     end;
-    Exit(WALK_CENTER);
+
+    Exit(EState.WALK_CENTER);
   end;
 
-  if Minimap.IsPrayerEnabled then
-    Exit(DISABLE_QPRAY);
+  if Minimap.IsPrayerEnabled() then
+    Exit(EState.DISABLE_QPRAY);
 
-  if Self.InBoat(Pos) then
-    Exit(WAIT_STATE);
+  if Self.InBoat(me) then
+    Exit(EState.WAIT_STATE);
 
-  Exit(ENTER_BOAT);
+  Exit(EState.ENTER_BOAT);
 end;
 
-procedure TScript.Run(MaxActions: Int32; MaxTime: Int64);
+procedure TPestControl.Run(maxActions: Int32; maxTime: Int64);
 begin
-  ClearDebug();
-  Self.Init(MaxActions, MaxTime);
+  Self.Init(maxActions, maxTime);
 
   repeat
     Self.State := Self.GetState();
-    writeln(self.state);
+    Self.SetAction(ToStr(Self.State));
+
     case Self.State of
-      WAIT_STATE: Wait(500, 800);
+      EState.WAIT_STATE: Wait(500, 800);
 
-      ENABLE_PRAYER: Minimap.EnablePrayer;
-      DISABLE_QPRAY: Minimap.DisablePrayer;
-      HEAL_PLAYER: SELF.HEAL;
-      ENTER_BOAT:  Self.EnterBoat;
-      WALK_CENTER: Self.WalkSpot;
+      EState.ENABLE_PRAYER: Minimap.EnablePrayer();
+      EState.DISABLE_QPRAY: Minimap.DisablePrayer();
+      EState.HEAL_PLAYER: Self.Heal();
+      ENTER_BOAT:  Self.EnterBoat();
+      EState.WALK_CENTER: Self.WalkSpot();
 
-      ATTACK:     CombatHandler.WalkAttackMonster;
-      IN_COMBAT:  MainScreen.WaitInCombat(1200);
-      END_SCRIPT: Break;
+      EState.ATTACK:     CombatHandler.WalkAttackMonster();
+      EState.IN_COMBAT:  MainScreen.WaitInCombat(1200);
+      EState.END_SCRIPT: Break;
     end;
 
     Self.DoAntiban();
@@ -216,9 +218,9 @@ begin
 end;
 
 var
-  Script: TScript;
+  PestControl: TPestControl;
 
-function TRSMainScreen.InCombat: Boolean; override;
+function TRSMainScreen.InCombat(): Boolean; override;
 begin
   Result := inherited;
 
@@ -303,52 +305,58 @@ end;
 
 {$IFDEF SCRIPT_GUI}
 type
-  TConfig = record(TScriptForm)
+  TPestControlConfig = record(TScriptForm)
     InfoBox: TLabel;
   end;
 
-procedure TConfig.StartScript(Sender: TObject);
+procedure TPestControlConfig.StartScript(sender: TObject); override;
 begin
-  Self.Init(Sender);
   //FoodManager.MinInvPoints := 20;
   //CurrentTask := ETask(Selector.Combobox.getItemIndex());
 
   //MaxActions := StrToInt(Self.ActionLimit.getText());
   //MaxTime    := StrToInt64(Self.TimeLimit.getText());
+  inherited;
 end;
 
-procedure TConfig.Setup(); override;
+procedure TPestControlConfig.Run(); override;
+var
+  tab: TTabSheet;
 begin
-  inherited;
+  Self.Setup('Wasp Pest Control');
+  Self.Start.setOnClick(@Self.StartScript);
+
+  Self.AddTab('Script Settings');
+  tab := Self.Tabs[High(Self.Tabs)];
+
+  Self.CreateAccountManager(tab);
 
   with InfoBox do
   begin
-    Init(Self.ScriptSettingsPanel);
-    setParent(ScriptSettingsPanel);
-    setCaption(
+    Create(tab);
+    SetCaption(
       'Using a ranged weapon is recommended.' + STR_NEW_LINE +
       'This will use your quick prayers, make sure you set them up in advance.'
     );
-    SetLeft(5);
-    SetTop(5);
-    SetWidth(200);
+    SetLeft(TControl.AdjustToDPI(30));
+    SetTop(TControl.AdjustToDPI(180));
   end;
-  Self.StartButton.setOnClick(@Self.StartScript);
-end;
 
-procedure TConfig.Run(); override;
-begin
-  Self.Setup();
+  Self.CreateVersionPanel(tab);
+  Self.CreateAlchemyPanel();
+  Self.CreateAntibanManager();
+  Self.CreateWaspLibSettings();
+  Self.CreateAPISettings();
 
   inherited;
 end;
 
 var
-  Config: TConfig;
+  PestControlConfig: TPestControlConfig;
 {$ENDIF}
 begin
   {$IFDEF SCRIPT_GUI}
-  Sync(@Config.Run);
+  PestControlConfig.Run();
   {$ENDIF}
-  Script.Run(WLSettings.MaxActions, WLSettings.MaxTime);
+  PestControl.Run(WLSettings.MaxActions, WLSettings.MaxTime);
 end.
