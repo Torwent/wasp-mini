@@ -1,6 +1,6 @@
 {$DEFINE SRL_USE_REMOTEINPUT}
-{$IFDEF WINDOWS}{$DEFINE SCRIPT_GUI}{$ENDIF}
-{$I SRL-t/osr.simba}
+{$DEFINE SCRIPT_GUI}
+{$I SRL-T/osr.simba}
 {$I WaspLib/osr.simba}
 {$I WaspLib/osr/handlers/combathandler.simba}
 
@@ -69,11 +69,9 @@ end;
 
 procedure TAntiban.Setup(); override;
 begin
-
-
-  Antiban.Skills := [ERSSkill.TOTAL];
-  Antiban.MinZoom := 15;
-  Antiban.MaxZoom := 40;
+  Antiban.Skills := [ERSSkill.HITPOINTS, ERSSkill.TOTAL];
+  Antiban.MinZoom := 0;
+  Antiban.MaxZoom := 15;
   inherited;
 end;
 
@@ -165,7 +163,7 @@ begin
 
   if Self.InIsland(me) then
   begin
-    if Self.PlayerLowHP() and Inventory.ContainsConsumable(ERSConsumable.FOOD_CONSUMABLE) then
+    if Self.PlayerLowHP() and Inventory.ContainsAny(FOOD_ARRAY) then
       Exit(EState.HEAL_PLAYER);
 
     if me.Y > 5653 then
@@ -204,13 +202,12 @@ begin
 
       EState.ENABLE_PRAYER: Minimap.EnablePrayer();
       EState.DISABLE_QPRAY: Minimap.DisablePrayer();
-      EState.HEAL_PLAYER: Self.Heal();
-      ENTER_BOAT:  Self.EnterBoat();
-      EState.WALK_CENTER: Self.WalkSpot();
-
-      EState.ATTACK:     CombatHandler.WalkAttackMonster();
-      EState.IN_COMBAT:  MainScreen.WaitInCombat(1200);
-      EState.END_SCRIPT: Break;
+      EState.HEAL_PLAYER:   Self.Heal();
+      ENTER_BOAT:           Self.EnterBoat();
+      EState.WALK_CENTER:   Self.WalkSpot();
+      EState.ATTACK:        CombatHandler.WalkAttackMonster(1);
+      EState.IN_COMBAT:     MainScreen.WaitInCombat(1200);
+      EState.END_SCRIPT:    Break;
     end;
 
     Self.DoAntiban();
