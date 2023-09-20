@@ -1,3 +1,12 @@
+## [0.9.3](https://github.com/Torwent/wasp-mini/compare/v0.9.2...v0.9.3) (2023-09-18)
+
+
+### Bug Fixes
+
+* **pest control:** works again ([242856a](https://github.com/Torwent/wasp-mini/commit/242856a2a0eee6cd014ae3db37e0641d696bf542))
+
+
+
 ## [0.9.2](https://github.com/Torwent/wasp-mini/compare/v0.9.1...v0.9.2) (2023-08-19)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **arceuus favour:** should now work with simba1400 ([afbb08a](https://github.com/Torwent/wasp-mini/commit/afbb08ae1a28e0f216e883ea42df9e84bd18d70b))
-
-
-
-## [0.8.1](https://github.com/Torwent/wasp-mini/compare/v0.8.0...v0.8.1) (2022-12-12)
-
-
-### Bug Fixes
-
-* **pest control:** combat timings ([6fc1da1](https://github.com/Torwent/wasp-mini/commit/6fc1da10f961d7b09c0c669d1e7dea17fbaa22f9))
 
 
 
