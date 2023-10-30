@@ -75,7 +75,7 @@ begin
   inherited;
 end;
 
-procedure TPestControl.Init(maxActions: Int32; maxTime: Int64); override;
+procedure TPestControl.Init(maxActions: UInt32; maxTime: UInt64); override;
 begin
   inherited;
 
