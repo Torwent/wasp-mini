@@ -77,6 +77,10 @@ end;
 
 procedure TPestControl.Init(maxActions: UInt32; maxTime: UInt64); override;
 begin
+  if Login.Players = [] then
+    Login.AddPlayer('','');
+  Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
+
   inherited;
 
   Self.RSW.Setup([RSRegions.PEST_CONTROL_ISLAND, RSRegions.PEST_CONTROL_OUTPOST]);
@@ -89,19 +93,7 @@ begin
   RSMonsters.AnyMonster.Filter.UpText := True;
   CombatHandler.Setup(RSMonsters.AnyMonster, 1200);
 
-  if Login.Players = [] then
-    Login.AddPlayer('','');
-  Login.Players[Login.PlayerIndex].Worlds := [344]; //override world to Pest control world
-
-  if not RSClient.IsLoggedIn() then
-    Login.LoginPlayer();
-  if WLSettings.RemoteInput.HUDDebug then
-  begin
-    //DebugNPCArray += TRSNPC(RSMonsters.AnyMonster);
-  end;
-  //Options.SetNPCAttackOption(ERSAttackOption.ALWAYS_LEFT_CLICK);
-
-  Self.SetupDifficulty;
+  Self.SetupDifficulty();
 end;
 
 
@@ -189,7 +181,7 @@ begin
   Exit(EState.ENTER_BOAT);
 end;
 
-procedure TPestControl.Run(maxActions: Int32; maxTime: Int64);
+procedure TPestControl.Run(maxActions: UInt32; maxTime: UInt64);
 begin
   Self.Init(maxActions, maxTime);
 
@@ -223,6 +215,41 @@ begin
 
   if Result then WL.Activity.Restart();
 end;
+
+function TRSCombatHandler.WaitHitSplats(): Boolean; override;
+var
+  t: UInt64;
+  i: Int32;
+  tmp, splats: TRSHitsplatArray;
+  b: TBox;
+begin
+  t := GetTickCount() + 3000;
+  b := MainScreen.GetPlayerBox();
+
+  repeat
+    if not PestControl.InIsland(PestControl.RSW.GetMyPos()) then
+      Exit;
+
+    tmp := MainScreen.FindHitsplats();
+
+    for i := 0 to High(tmp) do
+      if not b.Contains(tmp[i].Position) then
+        splats += tmp[i];
+
+    Result := splats <> [];
+    if Result then
+      Break;
+  until GetTickCount() > t;
+
+  if Result then
+  begin
+    Self.MonsterWalkerCoord := Self.GetMonsterDot(splats[0].Position);
+    Self.IsFighting := True;
+    Self.DoingSpec := False;
+    Self.InCombatTimer.Restart(Random(0, 2000));
+  end;
+end;
+
 
 function TWebGraph.PathBetween(p,q: TPoint; Rnd:Double=0): TPointArray; constref; override;
 var

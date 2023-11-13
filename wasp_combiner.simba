@@ -65,7 +65,7 @@ begin
   inherited;
 end;
 
-procedure TCombiner.Init(maxActions: Int32; maxTime: Int64); override;
+procedure TCombiner.Init(maxActions: UInt32; maxTime: UInt64); override;
 var
   Item: TRSBankDepositItem;
 begin
@@ -249,7 +249,7 @@ begin
     Exit(WaitUntil(not Make.IsOpen(), 100, 2000));
 end;
 
-function TCombiner.IsMakingProducts(WaitTime: Int32 = 600): Boolean;
+function TCombiner.IsMakingProducts(WaitTime: Int32 = 1200): Boolean;
 var
   InitialCount: Int32 := Self.CountProducts;
 begin

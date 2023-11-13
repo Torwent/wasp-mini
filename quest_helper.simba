@@ -26,7 +26,7 @@ begin
   Self.MaxZoom := 40;
 end;
 
-procedure TScript.Init(MaxActions: Int32; MaxTime: Int64); override;
+procedure TScript.Init(maxActions: UInt32; maxTime: UInt64); override;
 begin
   'Quest Helper';
 
@@ -73,7 +73,7 @@ begin
   Exit(WAIT_STATE);
 end;
 
-procedure TScript.Run(MaxActions: Int32; MaxTime: Int64);
+procedure TScript.Run(maxActions: UInt32; maxTime: UInt64);
 begin
   ClearDebug();
   Self.Init(MaxActions, MaxTime);

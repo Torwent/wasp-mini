@@ -71,7 +71,7 @@ begin
   end;
 end;
 
-procedure TLogBurner.Init(MaxActions: Int32; MaxTime: Int64); override;
+procedure TLogBurner.Init(maxActions: UInt32; maxTime: UInt64); override;
 begin
   'AIO Firemaker';
 
@@ -254,7 +254,7 @@ begin
   Exit(EBurnerState.Open_BANK);
 end;
 
-procedure TLogBurner.Run(MaxActions: Int32; MaxTime: Int64);
+procedure TLogBurner.Run(maxActions: UInt32; maxTime: UInt64);
 begin
   Self.Init(MaxActions, MaxTime);
 
