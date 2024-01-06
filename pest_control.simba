@@ -133,7 +133,7 @@ var
   MinPercent: Int32 := Random(60, 90);
 begin
   repeat
-    if not Inventory.Consume(ERSConsumable.FOOD_CONSUMABLE) then
+    if not Inventory.Consume(ERSConsumable.FOOD) then
       Exit;
     Wait(300, 500);
   until Result := (Minimap.GetHPPercent >= MinPercent);
