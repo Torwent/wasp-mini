@@ -1,3 +1,12 @@
+## [0.9.6](https://github.com/Torwent/wasp-mini/compare/v0.9.5...v0.9.6) (2024-04-08)
+
+
+### Bug Fixes
+
+* remove the version panels ([e6fe5be](https://github.com/Torwent/wasp-mini/commit/e6fe5be9bc528df39360caa6a2a21572751ceb11))
+
+
+
 ## [0.9.5](https://github.com/Torwent/wasp-mini/compare/v0.9.4...v0.9.5) (2024-01-06)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **combiner:** add combiner ([f8cf683](https://github.com/Torwent/wasp-mini/commit/f8cf683cd59c422964fdc96fa68c091b7f2259b2))
-
-
-
-## [0.9.1](https://github.com/Torwent/wasp-mini/compare/v0.9.0...v0.9.1) (2023-04-16)
-
-
-### Bug Fixes
-
-* **pest_control:** compiles again ([4c5cb0d](https://github.com/Torwent/wasp-mini/commit/4c5cb0d5702b4418b229d5eadef1bbdb40754b52))
 
 
 
