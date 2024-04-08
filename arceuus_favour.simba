@@ -50,7 +50,7 @@ end;
 
 
 begin
-  RSW.Setup([RSRegions.KOUREND_RUNECRAFTING]);
+  RSW.SetupRegions([RSRegions.KOUREND_RUNECRAFTING]);
 
   while True do
   begin

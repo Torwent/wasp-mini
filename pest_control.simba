@@ -83,7 +83,7 @@ begin
 
   inherited;
 
-  Self.RSW.Setup([RSRegions.PEST_CONTROL_ISLAND, RSRegions.PEST_CONTROL_OUTPOST]);
+  Self.RSW.SetupRegions([RSRegions.PEST_CONTROL_ISLAND, RSRegions.PEST_CONTROL_OUTPOST]);
   Self.Center := [5760, 5688];
 
   RSMonsters.AnyMonster.UpText := ['Attack'];
@@ -366,7 +366,6 @@ begin
     SetTop(TControl.AdjustToDPI(180));
   end;
 
-  Self.CreateVersionPanel(tab);
   Self.CreateAlchemyPanel();
   Self.CreateAntibanManager();
   Self.CreateWaspLibSettings();

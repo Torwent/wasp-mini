@@ -429,7 +429,6 @@ begin
   end;
   *)
 
-  Self.CreateVersionPanel(tab);
   Self.CreateAntibanManager();
   Self.CreateBankSettings();
   Self.CreateWaspLibSettings();
