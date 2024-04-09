@@ -2,7 +2,7 @@
 {$DEFINE SCRIPT_GUI}
 {$I SRL-T/osr.simba}
 {$I WaspLib/osr.simba}
-{$I WaspLib/osr/handlers/combathandler.simba}
+{$I WaspLib/optional/handlers/combathandler.simba} // By Baconadors :) 
 
 begin
   Login.PlayerIndex := 0;
