@@ -1,3 +1,12 @@
+## [0.9.7](https://github.com/Torwent/wasp-mini/compare/v0.9.6...v0.9.7) (2024-04-09)
+
+
+### Bug Fixes
+
+* Pest Control - Changed combathandler.simba directory to optional directory ([618f3e9](https://github.com/Torwent/wasp-mini/commit/618f3e901c844c2fe905550fc57f8589d3d3fb5c))
+
+
+
 ## [0.9.6](https://github.com/Torwent/wasp-mini/compare/v0.9.5...v0.9.6) (2024-04-08)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **pest control:** works again ([242856a](https://github.com/Torwent/wasp-mini/commit/242856a2a0eee6cd014ae3db37e0641d696bf542))
-
-
-
-## [0.9.2](https://github.com/Torwent/wasp-mini/compare/v0.9.1...v0.9.2) (2023-08-19)
-
-
-### Bug Fixes
-
-* **combiner:** add combiner ([f8cf683](https://github.com/Torwent/wasp-mini/commit/f8cf683cd59c422964fdc96fa68c091b7f2259b2))
 
 
 
