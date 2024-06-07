@@ -88,7 +88,7 @@ begin
 
   RSMonsters.AnyMonster.UpText := ['Attack'];
   RSMonsters.AnyMonster.Setup(50, 5, [Self.Center]);
-  RSMonsters.AnyMonster.DotFilter.Setup([5752, 5625, 3], False);
+  RSMonsters.AnyMonster.DotFilter.SetupCircle([5752, 5625, 3], False);
   RSMonsters.AnyMonster.Filter.MinimapDot := True;
   RSMonsters.AnyMonster.Filter.UpText := True;
   CombatHandler.Setup(RSMonsters.AnyMonster, 1200);
