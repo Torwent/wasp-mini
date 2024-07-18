@@ -1,3 +1,12 @@
+## [0.9.8](https://github.com/Torwent/wasp-mini/compare/v0.9.7...v0.9.8) (2024-07-18)
+
+
+### Bug Fixes
+
+* force bump ([bb845bb](https://github.com/Torwent/wasp-mini/commit/bb845bb7eb5641004296cb29bed54cda26a47b8a))
+
+
+
 ## [0.9.7](https://github.com/Torwent/wasp-mini/compare/v0.9.6...v0.9.7) (2024-04-09)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * **pest control:** tweaks for better performance ([68a6c1d](https://github.com/Torwent/wasp-mini/commit/68a6c1d7841b0c55463b9257a788698c9a906109))
-
-
-
-## [0.9.3](https://github.com/Torwent/wasp-mini/compare/v0.9.2...v0.9.3) (2023-09-18)
-
-
-### Bug Fixes
-
-* **pest control:** works again ([242856a](https://github.com/Torwent/wasp-mini/commit/242856a2a0eee6cd014ae3db37e0641d696bf542))
 
 
 
